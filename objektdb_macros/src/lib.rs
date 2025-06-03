@@ -1,6 +1,5 @@
 mod traits;
-#[doc(inline)]
-use helper::*;
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr};
