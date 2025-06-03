@@ -5,7 +5,7 @@ use quote::quote;
 use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr};
 
 #[proc_macro_attribute]
-pub fn objekto_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
+pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
     
     _item
 }
@@ -27,13 +27,13 @@ pub fn objekto_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 /// # Example
 /// ```
 /// use objektoDB::*;
-/// #[objekto("my_database.db")]
+/// #[objekt("my_database.db")]
 /// struct Person {
 ///    name: String,
 ///    age: u32,
 /// }
 #[proc_macro_attribute]
-pub fn objekto(_attr: TokenStream, _item    : TokenStream) -> TokenStream {
+pub fn objekt(_attr: TokenStream, _item    : TokenStream) -> TokenStream {
     let input = parse_macro_input!(_item as ItemStruct);
     let struct_name = &input.ident;
 
@@ -42,7 +42,7 @@ pub fn objekto(_attr: TokenStream, _item    : TokenStream) -> TokenStream {
 
 
     //Qui sarà necessario chiamare la funzione che crea il database
-
+    
 
     let expanded = quote::quote! {
         #input
