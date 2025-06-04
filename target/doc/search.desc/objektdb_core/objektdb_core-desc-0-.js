@@ -1,0 +1,1 @@
+searchState.loadedDescShard("objektdb_core", 0, "Creates a new database from the name. It initially creates …")

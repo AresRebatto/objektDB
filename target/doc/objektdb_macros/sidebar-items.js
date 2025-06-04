@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["objekt","objekt_impl"],"macro":["delete_db"]};

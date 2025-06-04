@@ -6,7 +6,8 @@ edition = "2024"
 [dependencies]
 syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
-core = {path = ../objektdb_core}
+objektdb_core = {path = "../objektdb_core"}
+
 
 [lib]
 proc-macro = true

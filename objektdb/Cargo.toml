@@ -1,8 +1,0 @@
-[package]
-name = "objektdb"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-macros = {path = ../objektdb_macros}
-core = {path = ../objektdb_core}
