@@ -2,7 +2,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 
-const MAGIC_NUMBER: u32 = 0x4D594442;
+const MAGIC_NUMBER: u32 = 0x4D59344A; //0x4D594442
 
 ///Creates a new database from the name. It initially creates it empty, and 
 /// you can then insert tables using the `create_table()` method.
@@ -32,7 +32,7 @@ pub fn create_db(_name : String) -> Result<(), String> {
     if !Path::new(&db_path).exists() {
 
         match OpenOptions::new().write(true).create_new(true).open(&db_path) {
-            Ok(f) => {
+            Ok(mut f) => {
                 let mut buffer = Vec::new();
 
                 //header
@@ -41,7 +41,7 @@ pub fn create_db(_name : String) -> Result<(), String> {
                 buffer.extend_from_slice(&[0u8; 1]); //Number of tables
                 buffer.extend_from_slice(&[0u8; 4]); //flags(for future use)
 
-                
+                f.write_all(&buffer ).map_err(|e| format!("Error writing to the file: {}", e))?;
                 return Ok(());
             },
             Err(e) => return Err(format!("Error in the file creation: {}", e)),
