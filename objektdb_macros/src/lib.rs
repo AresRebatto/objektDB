@@ -16,7 +16,7 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 ///If the specified database does not exist, it is automatically created: so if you mistype 
 /// the database name and enter one that does not exist, a new one will automatically be 
 /// created. For the moment , since a language for interacting with data directly is not yet 
-/// available, to delete a database you can make use of the macro `delete_db!(“database_name”)`.
+/// available, to delete a database you can make use of the function `delete_db(“database_name”)`.
 /// 
 /// In addition, it also implements CRUD trait to perform transactions on the database.
 /// In particular, it implements the following functions:
@@ -42,7 +42,7 @@ pub fn objekt(_attr: TokenStream, _item    : TokenStream) -> TokenStream {
 
 
     //Qui sarà necessario chiamare la funzione che crea il database
-    
+
 
     let expanded = quote::quote! {
         #input
@@ -74,17 +74,3 @@ pub fn objekt(_attr: TokenStream, _item    : TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-///Allows you to delete a database by passing it the name of the database as a parameter.
-///# Example
-/// ```
-/// use objektoDB::*;
-/// 
-/// delete_db!("my_database.db");
-///```
-#[proc_macro]
-pub fn delete_db(input: TokenStream) -> TokenStream {
-    let db_name = input.to_string();
-    //Ancora da mettere in piedi
-    //helper::delete_db(db_name);
-    TokenStream::new()
-}

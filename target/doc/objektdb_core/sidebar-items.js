@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["storage_engine","tests"]};
+window.SIDEBAR_ITEMS = {"mod":["storage_engine"]};

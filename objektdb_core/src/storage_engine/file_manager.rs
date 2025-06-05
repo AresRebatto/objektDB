@@ -2,10 +2,24 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 
-const MAGIC_NUMBER: u32 = 0x4D59344A; //0x4D594442
+/// Magic number that identifies the custom database file format.
+///
+/// This constant is written at the beginning of every `.db` file created by the system.
+/// It serves as a unique identifier to recognize and validate binary files that conform
+/// to this format.
+///
+/// The magic number is encoded as a `u32` in **little-endian** byte order.
+///
+/// # Purpose
+/// - Verifies file integrity.
+/// - Detects corrupted or incompatible files.
+/// - Rejects files that do not match the expected format.
+pub const MAGIC_NUMBER: u32 = 0x4D594442;
 
-///Creates a new database from the name. It initially creates it empty, and 
-/// you can then insert tables using the `create_table()` method.
+///Creates a new database from the name. 
+/// 
+/// It initially creates it empty, and you can then insert tables using the 
+/// `create_table()` method.
 ///The binary file that is created by the method follows the following format:
 /// ```json
 ///DATABASE_HEADER {
@@ -26,9 +40,26 @@ const MAGIC_NUMBER: u32 = 0x4D59344A; //0x4D594442
 ///    ...
 ///}
 /// ```
+/// # Arguments
+///
+/// * `db_name` - The name of the database (without the `.db` extension).
+///
+/// # Returns
+///
+/// * `Ok(())` if the database file was successfully created.
+/// * `Err(String)` if the file does not exist or if an error occurred during creation.
+/// # Example
+/// ```
+/// use objektoDB::storage_engine::file_manager::create_db;
+/// 
+/// match create_db(String::from("my_database")) {
+///     Ok(_) => println!("Database created successfully!"),
+///     Err(e) => println!("Error creating database: {}", e),
+/// }
 ///If the conversion is successful, it returns `Ok(())`, otherwise `Err(error)`
-pub fn create_db(_name : String) -> Result<(), String> {
+pub fn create_db(db_name : String) -> Result<(), String> {
     let db_path = format!("{}.db", _name);
+
     if !Path::new(&db_path).exists() {
 
         match OpenOptions::new().write(true).create_new(true).open(&db_path) {
@@ -57,5 +88,43 @@ pub fn create_db(_name : String) -> Result<(), String> {
 
 pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String> {
     todo!();
+}
+
+
+/// Deletes the specified database file from the filesystem.
+///
+/// This function attempts to remove the database file with the given name.
+/// The database file is expected to have a `.db` extension. If the file exists,
+/// it will be deleted. If the file does not exist, an error is returned.
+///
+/// # Arguments
+///
+/// * `db_name` - The name of the database (without the `.db` extension) to delete.
+///
+/// # Returns
+///
+/// * `Ok(())` if the database file was successfully deleted.
+/// * `Err(String)` if the file does not exist or if an error occurred during deletion.
+///
+/// # Example
+///
+/// ```
+/// use objektoDB::storage_engine::file_manager::delete_db;
+///
+/// match delete_db(String::from("my_database")) {
+///     Ok(_) => println!("Database deleted successfully!"),
+///     Err(e) => println!("Error deleting database: {}", e),
+/// }
+/// ```
+pub fn delete_db(db_name: String) -> Result<(), String> {
+    let db_name = input.to_string();
+    let db_path = format!("{}.db", db_name);
+    
+    if Path::new(&db_path).exists() {
+        std::fs::remove_file(&db_path).map_err(|e| format!("Error deleting database: {}", e))?;
+        Ok(())
+    } else {
+        Err(format!("Database {} does not exist", db_name))
+    }
 }
 
