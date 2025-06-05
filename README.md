@@ -24,3 +24,6 @@ use objektdb;
 
 ## Restriction
 - We currently support up to 255 tables per database
+
+## New Version
+- DB file template version: 1
