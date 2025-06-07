@@ -1,6 +1,6 @@
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
-use std::path::Path;
+use std::path::{self, Path};
 
 /// Magic number that identifies the custom database file format.
 ///
@@ -62,18 +62,18 @@ pub fn create_db(db_name : String) -> Result<(), String> {
 
     if !Path::new(&db_path).exists() {
 
-        match OpenOptions::new().write(true).create_new(true).open(&db_path) {
+        match File::create(&db_path) {
             Ok(mut f) => {
-                let mut buffer = Vec::new();
+            let mut buffer = Vec::with_capacity(10);
 
-                //header
-                buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes());
-                buffer.extend_from_slice(&[1 as u8]); //Version
-                buffer.extend_from_slice(&[0u8; 1]); //Number of tables
-                buffer.extend_from_slice(&[0u8; 4]); //flags(for future use)
+            //header
+            buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes());// Magic number (4 byte)
+            buffer.extend_from_slice(&[1u8]); // Version(1 byte)
+            buffer.extend_from_slice(&[0u8; 1]); // Number of tables(1 byte)
+            buffer.extend_from_slice(&[0u8; 4]); // flags (for future use)(4 byte)
 
-                f.write_all(&buffer ).map_err(|e| format!("Error writing to the file: {}", e))?;
-                return Ok(());
+            f.write_all(&buffer).map_err(|e| format!("Error writing to the file: {}", e))?;
+            return Ok(());
             },
             Err(e) => return Err(format!("Error in the file creation: {}", e)),
         }
@@ -87,7 +87,28 @@ pub fn create_db(db_name : String) -> Result<(), String> {
 }   
 
 pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String> {
-    todo!();
+
+    let path = format!("{}.db", _db_name);
+
+    // Check if the database file exists
+    if Path::new(&path).exists() {
+
+        let mut file = File::open(&path).map_err(|e| format!("Error opening database file: {}", e))?;
+        let mut buffer = Vec::new();
+
+        file.read_to_end(&mut buffer).map_err(|e| format!("Error reading database file: {}", e))?;
+
+        // Check if the file starts with the correct magic number
+        if buffer[0..7].to_vec() == MAGIC_NUMBER.to_le_bytes() {
+            
+            todo!("Implement table creation logic here");
+            //let table_offset = buffer[16..23];
+        }else{
+            return Err("Invalid database file format".to_string());
+        }
+    }else{
+        return Err(format!("Database {} does not exist", _db_name));
+    }
 }
 
 
