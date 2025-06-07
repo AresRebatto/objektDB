@@ -20,24 +20,15 @@ pub const MAGIC_NUMBER: u32 = 0x4D594442;
 /// 
 /// It initially creates it empty, and you can then insert tables using the 
 /// `create_table()` method.
-///The binary file that is created by the method follows the following format:
+///The header of the binary file that is created by the method follows the following format:
 /// ```json
 ///DATABASE_HEADER {
-///    magic_number = 0x4D594442, (4 byte(u32))
-///    version = 1, (1 byte(u8))
-///    num_tablespaces = N, (1 byte(u8))
-///    flags = u32   (4 byte)
+///    magic_number, (4 byte)
+///    version, (1 byte)
+///    num_tablespaces, (1 byte)
+///    flags (4 byte)
 ///}
 ///
-///TABLESPACE_DIRECTORY[N] {
-///    TablespaceEntry {
-///        name = "User", (64 byte)
-///        file_path = "user.tbl", (68 byte)
-///        offset = 123, (4 byte(u32))
-///        checksum = u32, (4 byte(u32))
-///        last_oid = u64,  (8 byte(u64))
-///    }
-///    ...
 ///}
 /// ```
 /// # Arguments
@@ -86,6 +77,38 @@ pub fn create_db(db_name : String) -> Result<(), String> {
     
 }   
 
+/// Creates a new table in the specified database.
+/// 
+/// This function initializes a new table within an existing database file.
+/// It checks if the database file exists and is in the correct format: in case
+/// it is not, it returns an error.
+/// Before creating the table, please ensure that the database file has been created using
+/// the `create_db()` function.
+/// One table has the following format:
+/// ```json
+/// TablespaceEntry {
+///        name, (64 byte)
+///        file_path, (68 byte-> 64 byte + 4 byte for extension "tbl")
+///        offset, (4 byte)
+///        checksum, (4 byte)
+///        last_oid (8 byte)        
+///    }
+/// ```
+/// # Arguments
+/// * `_table_name` - The name of the table to be created.
+/// * `_db_name` - The name of the database where the table will be created (without the `.db` extension).
+/// # Returns
+/// * `Ok(())` if the table was successfully created.
+/// * `Err(String)` if the database file does not exist, is invalid, or if an error occurred during the process.
+/// # Example
+/// ```
+/// use objektoDB::storage_engine::file_manager::create_table;
+/// match create_table(String::from("my_table"), String::from("my_database")) {
+///    Ok(_) => println!("Table created successfully!"),
+///    Err(e) => println!("Error creating table: {}", e),
+/// }
+/// ```
+/// 
 pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String> {
 
     let path = format!("{}.db", _db_name);
@@ -98,10 +121,11 @@ pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String>
 
         file.read_to_end(&mut buffer).map_err(|e| format!("Error reading database file: {}", e))?;
 
-        // Check if the file starts with the correct magic number
-        if buffer[0..7].to_vec() == MAGIC_NUMBER.to_le_bytes() {
-            
+        if buffer[0..4] == MAGIC_NUMBER.to_le_bytes() {
             todo!("Implement table creation logic here");
+
+            // header len + table num * one table len
+            let offset = 10 + buffer[4] * 148;
             //let table_offset = buffer[16..23];
         }else{
             return Err("Invalid database file format".to_string());
