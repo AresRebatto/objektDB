@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+objektdb_core = {path = "objektdb_core"}
+objektdb_macros = {path = "objektdb_macros"}
 
 [workspace]
 members = [
     "objektdb_core",
-    "objektdb_core"
+    "objektdb_macros"
 ]

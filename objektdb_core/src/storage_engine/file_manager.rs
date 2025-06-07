@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::{self, Path};
 
 /// Magic number that identifies the custom database file format.
@@ -49,7 +49,7 @@ pub const MAGIC_NUMBER: u32 = 0x4D594442;
 /// }
 ///If the conversion is successful, it returns `Ok(())`, otherwise `Err(error)`
 pub fn create_db(db_name : String) -> Result<(), String> {
-    let db_path = format!("{}.db", _name);
+    let db_path = format!("{}.db", db_name);
 
     if !Path::new(&db_path).exists() {
 
@@ -71,7 +71,7 @@ pub fn create_db(db_name : String) -> Result<(), String> {
 
 
     } else {
-        return Err(format!("Database {} already exists", _name));
+        return Err(format!("Database {} already exists", db_name));
     }   
 
     
@@ -119,7 +119,7 @@ pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String>
         let mut file = File::open(&path).map_err(|e| format!("Error opening database file: {}", e))?;
         let mut buffer = Vec::new();
 
-        file.read_to_end(&mut buffer).map_err(|e| format!("Error reading database file: {}", e))?;
+        file.read(&mut buffer).map_err(|e| format!("Error reading database file: {}", e))?;
 
         if buffer[0..4] == MAGIC_NUMBER.to_le_bytes() {
             todo!("Implement table creation logic here");
@@ -162,7 +162,7 @@ pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String>
 /// }
 /// ```
 pub fn delete_db(db_name: String) -> Result<(), String> {
-    let db_name = input.to_string();
+    let db_name = db_name;
     let db_path = format!("{}.db", db_name);
     
     if Path::new(&db_path).exists() {
