@@ -1,1 +1,0 @@
-searchState.loadedDescShard("objektdb", 0, "")

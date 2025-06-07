@@ -1,1 +1,0 @@
-searchState.loadedDescShard("objektdb_core", 0, "The <code>file_manager</code> module provides functionality for …\nMagic number that identifies the custom database file …\nCreates a new database from the name.\nDeletes the specified database file from the filesystem.")

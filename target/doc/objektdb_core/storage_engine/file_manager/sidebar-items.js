@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["MAGIC_NUMBER"],"fn":["create_db","create_table","delete_db"]};

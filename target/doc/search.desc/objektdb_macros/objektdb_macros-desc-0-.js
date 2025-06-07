@@ -1,1 +1,0 @@
-searchState.loadedDescShard("objektdb_macros", 0, "Allows you to delete a database by passing it the name of …\nIt should be inserted on top of your structs to declare …")
