@@ -117,11 +117,36 @@ pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String>
         file.read(&mut buffer).map_err(|e| format!("Error reading database file: {}", e))?;
 
         if buffer[0..4] == MAGIC_NUMBER.to_le_bytes() {
-            todo!("Implement table creation logic here");
+            
+            if buffer[4] >= 255 {
+                return Err("Maximum number of tables reached (255)".to_string());
+            }
 
-            // header len + table num * one table len
-            let offset = 10 + buffer[4] * 148;
-            //let table_offset = buffer[16..23];
+            // header len + table num * one table len. Maybe this will remove in the future
+            let offset: u8 = 10 + buffer[4] * 148;
+
+            buffer[4] += 1; // Increment the number of tables
+            
+            let name_bytes_raw = _table_name.as_bytes();
+
+            // Check if the table name is valid
+            if name_bytes_raw.len() > 64 {
+                return Err("Table name is too long, must be 64 bytes or less".to_string());
+            }
+
+            let mut name_bytes = Vec::with_capacity(64);
+            name_bytes.extend_from_slice(name_bytes_raw);
+
+            //we use null-padding right
+            name_bytes.resize(64, 0u8);
+
+
+            let path = format!("{}.tbl", _table_name);
+            let mut file_path = Vec::with_capacity(68);
+            file_path.extend_from_slice(path.as_bytes());
+
+            return Ok(())
+            
         }else{
             return Err("Invalid database file format".to_string());
         }
