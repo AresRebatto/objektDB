@@ -51,31 +51,26 @@ pub const MAGIC_NUMBER: u32 = 0x4D594442;
 pub fn create_db(db_name : String) -> Result<(), String> {
     let db_path = format!("{}.db", db_name);
 
-    if !Path::new(&db_path).exists() {
+    if Path::new(&db_path).exists() {
+        return Err(format!("Database {} already exists", db_name));
+    }
 
-        match File::create(&db_path) {
-            Ok(mut f) => {
+    match File::create(&db_path) {
+        Ok(mut f) => {
             let mut buffer = Vec::with_capacity(10);
 
             //header
-            buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes());// Magic number (4 byte)
+            buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes()); // Magic number (4 byte)
             buffer.extend_from_slice(&[1u8]); // Version(1 byte)
             buffer.extend_from_slice(&[0u8; 1]); // Number of tables(1 byte)
             buffer.extend_from_slice(&[0u8; 4]); // flags (for future use)(4 byte)
 
             f.write_all(&buffer).map_err(|e| format!("Error writing to the file: {}", e))?;
-            return Ok(());
-            },
-            Err(e) => return Err(format!("Error in the file creation: {}", e)),
-        }
-
-
-    } else {
-        return Err(format!("Database {} already exists", db_name));
-    }   
-
-    
-}   
+            Ok(())
+        },
+        Err(e) => Err(format!("Error in the file creation: {}", e)),
+    }
+}
 
 /// Creates a new table in the specified database.
 /// 

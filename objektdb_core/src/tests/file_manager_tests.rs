@@ -13,7 +13,7 @@ fn creates_new_database_file() {
     let result = create_db(TEST_DB_NAME.to_string());
     assert_eq!(result, Ok(()));
 
-    assert!(Path::new(&path).exists(), "Database file should be created");
+    assert_eq!(Path::new(&path).exists(), true);
 
     let mut file = File::open(&path).expect("Failed to open created file");
     let mut contents = Vec::new();
@@ -33,9 +33,9 @@ fn creates_new_database_file() {
 fn returns_error_if_file_exists() {
     let path = format!("{}.db", TEST_DB_NAME);
     let _ = File::create(&path); // crea file dummy
-
+    
     let result = create_db(TEST_DB_NAME.to_string());
-    assert!(result.is_err(), "Expected error when file already exists");
+    assert_eq!(result, Err(format!("Database {} already exists", TEST_DB_NAME)));
 
     let _ = fs::remove_file(&path);
 }
