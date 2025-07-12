@@ -21,66 +21,87 @@ use std::path::{self, Path, PathBuf};
 /// - Rejects files that do not match the expected format.
 pub const MAGIC_NUMBER: u32 = 0x4D594442;
 
-/// Creates a new database from the name. 
-/// 
-/// It initially creates it empty, and you can then insert tables using the 
-/// `create_table()` method.
-///The header of the binary file that is created by the method follows the following format:
-/// ```json
-///DATABASE_HEADER {
-///    magic_number, (4 byte)
-///    version, (1 byte)
-///    num_tablespaces, (1 byte)
-///    flags (4 byte)
-///}
+/// Creates a new database file and its directory structure.
 ///
-///}
-/// ```
+/// This function initializes a new database by creating a directory named after `db_name`
+/// and a corresponding `.db` file inside it. The database file is initialized with a binary
+/// header containing metadata required for future operations.
+///
+/// The header format is as follows (total 10 bytes):
+/// - Magic number (4 bytes, little-endian): Identifies the file as a valid objektDB database.
+/// - Version (1 byte): Database format version.
+/// - Number of tables (1 byte): Initially set to 0.
+/// - Flags (4 bytes): Reserved for future use.
+///
 /// # Arguments
 ///
-/// * `db_name` - The name of the database (without the `.db` extension).
+/// * `db_name` - The name of the database (without the `.db` extension). This will be used
+///   both for the directory and the file name.
 ///
 /// # Returns
 ///
-/// * `Ok(())` if the database file was successfully created.
-/// * `Err(String)` if the file does not exist or if an error occurred during creation.
+/// * `Ok(())` if the database directory and file were successfully created and initialized.
+/// * `Err(String)` if the directory or file could not be created, or if the database already exists.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The directory cannot be created (e.g., due to permissions or it already exists).
+/// - The database file already exists.
+/// - The file cannot be created or written to.
+///
 /// # Example
 /// ```
 /// use objektDB::storage_engine::file_manager::create_db;
-/// 
+///
 /// match create_db(String::from("my_database")) {
 ///     Ok(_) => println!("Database created successfully!"),
 ///     Err(e) => println!("Error creating database: {}", e),
 /// }
 /// ```
-///If the conversion is successful, it returns `Ok(())`, otherwise `Err(error)`
+///
+/// # Notes
+/// - This function does not create any tables; use `create_table()` to add tables after database creation.
+/// - The database directory will be created in the current working directory.
+/// - If an error occurs after the directory is created but before the file is written, the directory may remain on disk.
 pub fn create_db(db_name : String) -> Result<(), String>{
-    match std::fs::create_dir(&db_name){
-        Err(e)=> Err(format!("Error creating the database directory: {}", e)),
-        Ok(_)=>{
 
-            //we need to do binding for the life time
-            let path_dir = format!("{}/{}.db", db_name, db_name);
-            let db_path = Path::new(&path_dir);
-            if db_path.exists(){
-                return Err("The database already exists".to_string()); 
+    std::fs::create_dir(&db_name)
+        .map_err(|e| format!("Error creating database directory: {}", e))?;
+        
+
+    //we need to do binding for the life time
+    let path_dir = format!("{}/{}.db", db_name, db_name);
+    let db_path = Path::new(&path_dir);
+    
+    if db_path.exists(){
+        return Err("The database already exists".to_string()); 
+    }
+
+    
+    match File::create(db_path){
+        Err(e) => {
+            //to remove directory
+            let _ = std::fs::remove_dir(db_path);
+            Err(format!("Error creating db: {}", e))
+        },
+        Ok(mut file)=>{
+            let mut buffer = Vec::with_capacity(10);
+
+            buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes()); // Magic number (4 byte)
+            buffer.extend_from_slice(&[1u8]); // Version (1 byte)
+            buffer.extend_from_slice(&[0u8; 1]); // Number of tables (1 byte)
+            buffer.extend_from_slice(&[0u8; 4]); // flags (for future use) (4 byte)
+
+            match file.write(&buffer){
+                Err(e) => Err(format!("Impossbile to create database: {}", e)),
+                Ok(_) => Ok(())
             }
-
-            
-            match File::create(db_path){
-                Err(e) => {
-                    Err(format!("Error creating db: {}", e))
-
-                    //In caso di annullamento, si deve vedere se esiste ancora
-                    //la directory e, in caso, eliminarla per abortire l'operazione
-                },
-                Ok(_)=>{
-                    return Ok(());
-                }
-            }
-            
-            
         }
+            
+            
+            
+        
     }
 }
 /*pub fn create_db(db_name : String) -> Result<(), String> {
