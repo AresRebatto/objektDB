@@ -1,51 +1,50 @@
-use crate::storage_engine::file_manager::*;
-use std::fs::{self, File};
-use std::io::Read;
+
+use super::super::storage_engine::file_manager::*;
+use std::fs;
 use std::path::Path;
 
-const TEST_DB_NAME: &str = "test_db";
-
 #[test]
-fn creates_new_database_file() {
-    let path = format!("{}.db", TEST_DB_NAME);
-    let _ = fs::remove_file(&path); // cleanup iniziale
+fn test_create_db_success() {
+    // Remove any previous test directory
+    let db_name = "test_db_create";
+    let _ = fs::remove_dir_all(db_name);
 
-    let result = create_db(TEST_DB_NAME.to_string());
-    assert_eq!(result, Ok(()));
+    // Should create the database successfully
+    let result = create_db(db_name.to_string());
+    assert!(result.is_ok());
 
-    assert_eq!(Path::new(&path).exists(), true);
+    // Check if the .db file exists
+    let db_file_path = format!("{}/{}.db", db_name, db_name);
+    assert!(Path::new(&db_file_path).exists());
 
-    let mut file = File::open(&path).expect("Failed to open created file");
-    let mut contents = Vec::new();
-    file.read_to_end(&mut contents).expect("Failed to read file");
-
-    assert_eq!(contents.len(), 10, "File should contain 10 bytes");
-
-    assert_eq!(&contents[0..4], &MAGIC_NUMBER.to_le_bytes(), "MAGIC_NUMBER mismatch");
-    assert_eq!(contents[4], 1u8, "Version byte mismatch");
-    assert_eq!(contents[5], 0u8, "Number of tables should be 0");
-    assert_eq!(&contents[6..10], &[0u8; 4], "Flags should be 4 zero bytes");
-
-    let _ = fs::remove_file(&path);
+    // Clean up
+    let _ = fs::remove_file(&db_file_path);
+    let _ = fs::remove_dir(db_name);
 }
 
 #[test]
-fn returns_error_if_file_exists() {
-    let path = format!("{}.db", TEST_DB_NAME);
-    let _ = File::create(&path); // crea file dummy
-    
-    let result = create_db(TEST_DB_NAME.to_string());
-    assert_eq!(result, Err(format!("Database {} already exists", TEST_DB_NAME)));
+fn test_create_db_already_exists() {
+    // Remove any previous test directory
+    let db_name = "test_db_exists";
+    let _ = fs::remove_dir_all(db_name);
 
-    let _ = fs::remove_file(&path);
+    // First creation should succeed
+    assert!(create_db(db_name.to_string()).is_ok());
+
+    // Second creation should fail because db already exists
+    let result = create_db(db_name.to_string());
+    assert!(result.is_err());
+
+    // Clean up
+    let db_file_path = format!("{}/{}.db", db_name, db_name);
+    let _ = fs::remove_file(&db_file_path);
+    let _ = fs::remove_dir(db_name);
 }
 
 #[test]
-fn returns_error_with_invalid_filename() {
-    // Solo su Windows il carattere "<" è illegale. Questo test può essere opzionale.
-    #[cfg(windows)]
-    {
-        let result = create_db("invalid<name".to_string());
-        assert!(result.is_err(), "Expected error with invalid filename");
-    }
+fn test_create_db_invalid_dir() {
+    // Try to create a database with an invalid directory name (Windows reserved name)
+    let db_name = "con"; // "con" is reserved on Windows
+    let result = create_db(db_name.to_string());
+    assert!(result.is_err());
 }

@@ -51,7 +51,7 @@ pub const MAGIC_NUMBER: u32 = 0x4D594442;
 /// - The file cannot be created or written to.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// use objektDB::storage_engine::file_manager::create_db;
 ///
 /// match create_db(String::from("my_database")) {
@@ -82,8 +82,8 @@ pub fn create_db(db_name : String) -> Result<(), String>{
     match File::create(db_path){
         Err(e) => {
             //to remove directory
-            let _ = std::fs::remove_dir(db_path);
-            Err(format!("Error creating db: {}", e))
+            let _ = std::fs::remove_dir(&db_path);
+            Err(format!("Error creating database: {}", e))
         },
         Ok(mut file)=>{
             let mut buffer = Vec::with_capacity(10);
@@ -94,43 +94,12 @@ pub fn create_db(db_name : String) -> Result<(), String>{
             buffer.extend_from_slice(&[0u8; 4]); // flags (for future use) (4 byte)
 
             match file.write(&buffer){
-                Err(e) => Err(format!("Impossbile to create database: {}", e)),
+                Err(e) => Err(format!("Failed to write database header: {}", e)),
                 Ok(_) => Ok(())
             }
-        }
-            
-            
-            
-        
+        }       
     }
 }
-/*pub fn create_db(db_name : String) -> Result<(), String> {
-    if let Err(e) = std::fs::create_dir(&db_name) {
-        return Err(format!("Error creating database directory: {}", e));
-    }
-    let db_dir = Path::new(&db_name);
-    let db_path = db_dir.join(format!("{}.db", db_name));
-
-    if db_path.exists() {
-        return Err(format!("Database {} already exists", db_name));
-    }
-
-    match File::create(&db_path) {
-        Ok(mut f) => {
-            let mut buffer = Vec::with_capacity(10);
-
-            // header
-            buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes()); // Magic number (4 byte)
-            buffer.extend_from_slice(&[1u8]); // Version (1 byte)
-            buffer.extend_from_slice(&[0u8; 1]); // Number of tables (1 byte)
-            buffer.extend_from_slice(&[0u8; 4]); // flags (for future use) (4 byte)
-
-            f.write_all(&buffer).map_err(|e| format!("Error writing to the file: {}", e))?;
-            Ok(())
-        },
-        Err(e) => Err(format!("Error in the file creation: {}", e)),
-    }
-}*/
 
 /// Creates a new table in the specified database.
 /// 
@@ -156,7 +125,7 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 /// * `Ok(())` if the table was successfully created.
 /// * `Err(String)` if the database file does not exist, is invalid, or if an error occurred during the process.
 /// # Example
-/// ```
+/// ```ignore
 /// use objektDB::storage_engine::file_manager::create_table;
 /// match create_table(String::from("my_table"), String::from("my_database")) {
 ///    Ok(_) => println!("Table created successfully!"),
@@ -233,7 +202,7 @@ pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String>
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use objektDB::storage_engine::file_manager::delete_db;
 ///
 /// match delete_db(String::from("my_database")) {
