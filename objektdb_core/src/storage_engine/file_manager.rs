@@ -3,6 +3,7 @@ use std::fmt::format;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{self, Path, PathBuf};
+use super::field::Field;
 
 //DA RIVEDERE TUTTA LA DOCUMENTAZIONE IN TESTA AI METODI
 
@@ -115,14 +116,16 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 ///	    OffsetHeader,
 ///	    OffsetIndex,
 ///	    OffsetBucket,
+///     last_OID
 ///	    References{
+///         length
 ///	    	ClassName1,
 ///	    	ClassName2
 ///	    }
 ///	    ClassFormat{
 ///	    	OID is_PK is_FK type
-///	    	Campo1 is_PK is_FK type
-///	    	Campo2 is_PK is_FK type
+///	    	Field1 is_PK is_FK type
+///	    	Field2 is_PK is_FK type
 ///	    	
 ///	    	MethodName1
 ///	    	MethodName2
@@ -144,7 +147,7 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 /// }
 /// ```
 /// 
-pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String> {
+pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>) -> Result<(), String> {
     
     //CHANGES TO DB FILE
     let path = format!("{}/{}.db", _db_name, _db_name);

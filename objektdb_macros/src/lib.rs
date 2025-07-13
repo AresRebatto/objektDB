@@ -26,7 +26,7 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 /// - `delete()`
 /// # Example
 /// ```
-/// use objektoDB::*;
+/// use objektDB::*;
 /// #[objekt("my_database.db")]
 /// struct Person {
 ///    name: String,
