@@ -110,13 +110,24 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 /// the `create_db()` function.
 /// One table has the following format:
 /// ```json
-/// TablespaceEntry {
-///        name, (64 byte)
-///        file_path, (68 byte-> 64 byte + 4 byte for extension "tbl")
-///        offset, (4 byte)
-///        checksum, (4 byte)
-///        last_oid (8 byte)        
-///    }
+/// HEADER{
+///	NomeClasse,
+///	    OffsetHeader,
+///	    OffsetIndex,
+///	    OffsetBucket,
+///	    References{
+///	    	ClassName1,
+///	    	ClassName2
+///	    }
+///	    ClassFormat{
+///	    	OID is_PK is_FK type
+///	    	Campo1 is_PK is_FK type
+///	    	Campo2 is_PK is_FK type
+///	    	
+///	    	MethodName1
+///	    	MethodName2
+///	    }
+///}
 /// ```
 /// # Arguments
 /// * `_table_name` - The name of the table to be created.
@@ -134,14 +145,15 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 /// ```
 /// 
 pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String> {
-
+    
+    //CHANGES TO DB FILE
     let path = format!("{}/{}.db", _db_name, _db_name);
 
     // Check if the database file exists
     if Path::new(&path).exists() {
 
-        let mut file = File::open(&path).map_err(|e| format!("Error opening database file: {}", e))?;
-        let mut buffer = Vec::new();
+        let mut file: File = File::open(&path).map_err(|e| format!("Error opening database file: {}", e))?;
+        let mut buffer: Vec<u8> = Vec::new();
 
         file.read(&mut buffer).map_err(|e| format!("Error reading database file: {}", e))?;
 
@@ -151,14 +163,19 @@ pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String>
                 return Err("Maximum number of tables reached (255)".to_string());
             }
 
-            // header len + table num * one table len. Maybe this will remove in the future
+            // header len + table num * one table len. (Where we'll start to write in tbl file)
             let offset: u8 = 10 + buffer[4] * 148;
 
             buffer[4] += 1; // Increment the number of tables
-            
-            let name_bytes_raw = _table_name.as_bytes();
 
-            // Check if the table name is valid
+            let _ = file.write(&buffer);
+
+
+            //CHANGES TO TBL FILE
+            
+            //convert to UTF-8
+            let name_bytes_raw: &[u8] = _table_name.as_bytes();
+
             if name_bytes_raw.len() > 64 {
                 return Err("Table name is too long, must be 64 bytes or less".to_string());
             }
@@ -169,12 +186,17 @@ pub fn create_table(_table_name: String, _db_name: String) -> Result<(), String>
             //we use null-padding right
             name_bytes.resize(64, 0u8);
 
+            let path = format!("{}/{}.tbl",_db_name, _table_name);
+            
 
-            let path = format!("{}.tbl", _table_name);
-            let mut file_path = Vec::with_capacity(68);
-            file_path.extend_from_slice(path.as_bytes());
+            match File::create(path){
+                Err(e)=> Err(format!("The table could not be created: {}", e)),
+                Ok(f)=>{
+                    return Ok(());
+                }
+            }
 
-            return Ok(())
+            
             
         }else{
             return Err("Invalid database file format".to_string());
