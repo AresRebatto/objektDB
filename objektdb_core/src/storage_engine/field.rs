@@ -5,5 +5,8 @@
 ///It grants some methods for handling fields, especially 
 ///with regard to reading from binary files.
 pub struct Field{
-    
+    name: String,
+    is_OID: bool,
+    is_FK: bool,
+    type_: String //come gestire le fk?
 }

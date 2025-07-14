@@ -3,6 +3,7 @@ use std::fmt::format;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{self, Path, PathBuf};
+use std::vec;
 use super::field::Field;
 
 //DA RIVEDERE TUTTA LA DOCUMENTAZIONE IN TESTA AI METODI
@@ -123,9 +124,9 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 ///	    	ClassName2
 ///	    }
 ///	    ClassFormat{
-///	    	OID is_PK is_FK type
-///	    	Field1 is_PK is_FK type
-///	    	Field2 is_PK is_FK type
+///	    	OID is_OID is_FK type
+///	    	Field1 is_OID is_FK type
+///	    	Field2 is_OID is_FK type
 ///	    	
 ///	    	MethodName1
 ///	    	MethodName2
@@ -147,7 +148,7 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 /// }
 /// ```
 /// 
-pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>) -> Result<(), String> {
+pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>, _methods_names: Vec<String>) -> Result<(), String> {
     
     //CHANGES TO DB FILE
     let path = format!("{}/{}.db", _db_name, _db_name);
@@ -183,7 +184,7 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 return Err("Table name is too long, must be 64 bytes or less".to_string());
             }
 
-            let mut name_bytes = Vec::with_capacity(64);
+            let mut name_bytes: Vec<u8> = Vec::with_capacity(64);
             name_bytes.extend_from_slice(name_bytes_raw);
 
             //we use null-padding right
@@ -191,6 +192,18 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
 
             let path = format!("{}/{}.tbl",_db_name, _table_name);
             
+            let mut references_field: Vec<u8> = Vec::new();
+
+            //First byte is num of references
+            references_field.push(_ref.len() as u8);
+
+            for r in &_ref {
+
+                let mut ref_bytes = r.as_bytes().to_vec();
+                ref_bytes.resize(64, 0u8); // pad to 64 bytes
+                references_field.extend_from_slice(&ref_bytes);
+
+            }
 
             match File::create(path){
                 Err(e)=> Err(format!("The table could not be created: {}", e)),
@@ -256,5 +269,5 @@ pub fn delete_db(db_name: String) -> Result<(), String> {
 ///
 ///**Caution**: the method deletes all data within the table.
 pub fn reinitialize_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>)-> Result<(), String>{
-
+    todo!()
 }
