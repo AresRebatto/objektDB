@@ -5,10 +5,10 @@
 ///It grants some methods for handling fields, especially 
 ///with regard to reading from binary files.
 pub struct Field{
-    name: String,
-    is_OID: bool,
-    is_FK: bool,
-    type_: String //FK types will be managed by a function that will create a kind of register in a
+    pub name: String,
+    pub is_OID: bool,
+    pub is_FK: bool,
+    pub type_: String //FK types will be managed by a function that will create a kind of register in a
     //different rust file where will be create a match pattern for convert fk values in effective values
 }
 

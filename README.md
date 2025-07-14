@@ -45,7 +45,8 @@ use objektdb;
 <h2 style="border-bottom : 0;">Restriction</h2>
 
 - We currently support up to 255 tables per database
-
+- Your structs cannot have a name that exceeds 64 characters
+- For the time being, you can interact with databases only through the traits implemented by the macros and functions provided by the library: there is no specific language for interacting yet.
 <h2 style="border-bottom : 0;">New Version</h2>
 
 - DB file template version: 1

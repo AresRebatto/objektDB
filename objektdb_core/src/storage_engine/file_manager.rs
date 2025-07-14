@@ -66,26 +66,21 @@ pub const MAGIC_NUMBER: u32 = 0x4D594442;
 /// - The database directory will be created in the current working directory.
 /// - If an error occurs after the directory is created but before the file is written, the directory may remain on disk.
 pub fn create_db(db_name: String) -> Result<(), String> {
-    // Recupera la directory di lavoro dell'utente
+    //Work directory of developer
     let current_dir = env::current_dir()
         .map_err(|e| format!("Error getting current directory: {}", e))?;
 
-    // Crea il path della directory del database
     let db_dir = current_dir.join(&db_name);
 
-    // Crea la directory
     fs::create_dir(&db_dir)
         .map_err(|e| format!("Error creating database directory: {}", e))?;
 
-    // Crea il path del file .db
     let db_file_path = db_dir.join(format!("{}.db", db_name));
 
-    // Controlla se il file esiste già
     if db_file_path.exists() {
         return Err("The database already exists".to_string());
     }
 
-    // Prova a creare il file
     match File::create(&db_file_path) {
         Err(e) => {
             let _ = fs::remove_dir(&db_dir); // pulizia
@@ -95,8 +90,8 @@ pub fn create_db(db_name: String) -> Result<(), String> {
             let mut buffer = Vec::with_capacity(10);
 
             buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes()); // Magic number
-            buffer.extend_from_slice(&[1u8]); // Versione
-            buffer.extend_from_slice(&[0u8]); // Numero tabelle
+            buffer.extend_from_slice(&[1u8]); // Version
+            buffer.extend_from_slice(&[0u8]); // Number of tables
             buffer.extend_from_slice(&[0u8; 4]); // Flags
 
             file.write_all(&buffer)
@@ -116,7 +111,7 @@ pub fn create_db(db_name: String) -> Result<(), String> {
 /// One table has the following format:
 /// ```json
 /// HEADER{
-///	NomeClasse,
+///	    struct_name,
 ///	    OffsetHeader,
 ///	    OffsetIndex,
 ///	    OffsetBucket,
@@ -126,13 +121,32 @@ pub fn create_db(db_name: String) -> Result<(), String> {
 ///	    	ClassName1,(max 64 bytes)
 ///	    	ClassName2
 ///	    }
-///	    ClassFormat{
-///	    	OID is_OID is_FK type
-///	    	Field1 is_OID is_FK type
-///	    	Field2 is_OID is_FK type
-///	    	
-///	    	MethodName1
-///	    	MethodName2
+///	    StructStructure{
+///	    	(In the data section will be added OID on the top for every istance
+///         as a u32)
+///         length(for switch directly to method
+///             names without reading all fields
+///             and their length)
+///         {
+///             length (2 byte)
+///             field1
+///             is_fk
+///             type
+///         }
+///	        {
+///             length
+///             field2
+///             is_fk
+///             type         
+///         }
+///         {
+///             length (8 byte)
+///             methodname1
+///         }
+///         {
+///             length
+///             methodname2
+///         }
 ///	    }
 ///}
 /// ```
@@ -153,8 +167,11 @@ pub fn create_db(db_name: String) -> Result<(), String> {
 /// 
 pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>, _methods_names: Vec<String>) -> Result<(), String> {
     
+    let current_dir = env::current_dir()
+        .map_err(|e| format!("Error getting current directory: {}", e))?;
+
     //CHANGES TO DB FILE
-    let path = format!("{}/{}.db", _db_name, _db_name);
+    let path = current_dir.join(format!("{}/{}.db", _db_name, _db_name));
 
     // Check if the database file exists
     if Path::new(&path).exists() {
@@ -195,6 +212,7 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
 
             let path = format!("{}/{}.tbl",_db_name, _table_name);
             
+            //Lenth: 1(8 bit for the num of fields) + num_fields*64
             let mut references_field: Vec<u8> = Vec::new();
 
             //First byte is num of references
@@ -206,6 +224,22 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 ref_bytes.resize(64, 0u8); // pad to 64 bytes
                 references_field.extend_from_slice(&ref_bytes);
 
+            }
+
+            let mut struct_structure: Vec<u8> = Vec::new();
+            
+            //In case of overflow
+            if _fields.len() > u8::MAX as usize{
+                return Err("You can't create a struct with more than 255 fields".to_string())
+            }
+            struct_structure.push(_fields.len() as u8);
+            
+            //Use it 'cause we don't have the total length
+            let mut fields: Vec<u8> = Vec::new();
+            let mut tot_len = 0;
+
+            for field in _fields{
+               //fields.push(field.name.as_bytes().len() as u8 + field.); 
             }
 
             match File::create(path){
