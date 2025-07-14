@@ -1,10 +1,9 @@
-use std::f32::consts::E;
-use std::fmt::format;
-use std::fs::{File, OpenOptions};
+use std::fs::{File, self};
 use std::io::{Read, Write};
-use std::path::{self, Path, PathBuf};
-use std::vec;
+use std::path::{Path};
 use super::field::Field;
+use std::{env};
+
 
 //DA RIVEDERE TUTTA LA DOCUMENTAZIONE IN TESTA AI METODI
 
@@ -66,42 +65,46 @@ pub const MAGIC_NUMBER: u32 = 0x4D594442;
 /// - This function does not create any tables; use `create_table()` to add tables after database creation.
 /// - The database directory will be created in the current working directory.
 /// - If an error occurs after the directory is created but before the file is written, the directory may remain on disk.
-pub fn create_db(db_name : String) -> Result<(), String>{
+pub fn create_db(db_name: String) -> Result<(), String> {
+    // Recupera la directory di lavoro dell'utente
+    let current_dir = env::current_dir()
+        .map_err(|e| format!("Error getting current directory: {}", e))?;
 
-    std::fs::create_dir(&db_name)
+    // Crea il path della directory del database
+    let db_dir = current_dir.join(&db_name);
+
+    // Crea la directory
+    fs::create_dir(&db_dir)
         .map_err(|e| format!("Error creating database directory: {}", e))?;
-        
 
-    //we need to do binding for the life time
-    let path_dir = format!("{}/{}.db", db_name, db_name);
-    let db_path = Path::new(&path_dir);
-    
-    if db_path.exists(){
-        return Err("The database already exists".to_string()); 
+    // Crea il path del file .db
+    let db_file_path = db_dir.join(format!("{}.db", db_name));
+
+    // Controlla se il file esiste già
+    if db_file_path.exists() {
+        return Err("The database already exists".to_string());
     }
 
-    
-    match File::create(db_path){
+    // Prova a creare il file
+    match File::create(&db_file_path) {
         Err(e) => {
-            //to remove directory
-            let _ = std::fs::remove_dir(&db_path);
-            Err(format!("Error creating database: {}", e))
+            let _ = fs::remove_dir(&db_dir); // pulizia
+            Err(format!("Error creating database file: {}", e))
         },
-        Ok(mut file)=>{
+        Ok(mut file) => {
             let mut buffer = Vec::with_capacity(10);
 
-            buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes()); // Magic number (4 byte)
-            buffer.extend_from_slice(&[1u8]); // Version (1 byte)
-            buffer.extend_from_slice(&[0u8; 1]); // Number of tables (1 byte)
-            buffer.extend_from_slice(&[0u8; 4]); // flags (for future use) (4 byte)
+            buffer.extend_from_slice(&MAGIC_NUMBER.to_le_bytes()); // Magic number
+            buffer.extend_from_slice(&[1u8]); // Versione
+            buffer.extend_from_slice(&[0u8]); // Numero tabelle
+            buffer.extend_from_slice(&[0u8; 4]); // Flags
 
-            match file.write(&buffer){
-                Err(e) => Err(format!("Failed to write database header: {}", e)),
-                Ok(_) => Ok(())
-            }
-        }       
+            file.write_all(&buffer)
+                .map_err(|e| format!("Failed to write database header: {}", e))
+        }
     }
 }
+
 
 /// Creates a new table in the specified database.
 /// 

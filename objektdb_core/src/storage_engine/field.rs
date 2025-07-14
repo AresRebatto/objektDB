@@ -8,5 +8,12 @@ pub struct Field{
     name: String,
     is_OID: bool,
     is_FK: bool,
-    type_: String //come gestire le fk?
+    type_: String //FK types will be managed by a function that will create a kind of register in a
+    //different rust file where will be create a match pattern for convert fk values in effective values
+}
+
+pub enum FieldType{
+    OID,
+    ForeignKey{reference: String},
+    Primitive(String)
 }
