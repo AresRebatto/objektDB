@@ -118,8 +118,8 @@ pub fn create_db(db_name : String) -> Result<(), String>{
 ///	    OffsetBucket,
 ///     last_OID
 ///	    References{
-///         length
-///	    	ClassName1,
+///         references_n
+///	    	ClassName1,(max 64 bytes)
 ///	    	ClassName2
 ///	    }
 ///	    ClassFormat{
@@ -247,3 +247,14 @@ pub fn delete_db(db_name: String) -> Result<(), String> {
     }
 }
 
+
+///Allows you to reinitialize a table.
+///
+///It must be called **manually** by the developer 
+///when applying some change to the structure of one 
+///of the structs. The method clears the table and reinitializes it.
+///
+///**Caution**: the method deletes all data within the table.
+pub fn reinitialize_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>)-> Result<(), String>{
+
+}
