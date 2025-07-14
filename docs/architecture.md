@@ -5,7 +5,7 @@
 | objektdb_macros | This is a procedural macro crate and contains all those macros that, when applied to your own structs, allow your code to interact with databases |
 
 ## objectdb_core
-The purpose of this trait is to implement a form of storage engine that allows direct interaction with the binary files within which the data is contained. Let's take a look at the structures and logic by which the binaries are put written(you can review the same structures within the code in the comments and also in the documentation with `cargo test --open`):
+The purpose of this crate is to implement a form of storage engine that allows direct interaction with the binary files within which the data is contained. Let's take a look at the structures and logic by which the binaries are put written(you can review the same structures within the code in the comments and also in the documentation with `cargo test --open`):
 
 A folder is created for each database with the name of the database and a file always with the same name with the extension `.db`:
 
