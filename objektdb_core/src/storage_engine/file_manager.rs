@@ -187,8 +187,17 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 return Err("Maximum number of tables reached (255)".to_string());
             }
 
+            
+            
+            //OFFSET LATER
+            
             // header len + table num * one table len. (Where we'll start to write in tbl file)
-            let offset: u8 = 10 + buffer[4] * 148;
+            //let offset: u8 = 10 + buffer[4] * 148;
+
+
+
+
+
 
             buffer[4] += 1; // Increment the number of tables
 
@@ -228,18 +237,22 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
 
             let mut struct_structure: Vec<u8> = Vec::new();
             
-            //In case of overflow
-            if _fields.len() > u8::MAX as usize{
-                return Err("You can't create a struct with more than 255 fields".to_string())
-            }
-            struct_structure.push(_fields.len() as u8);
             
-            //Use it 'cause we don't have the total length
+            //length_field+field+is_fk+length_type+type
             let mut fields: Vec<u8> = Vec::new();
             let mut tot_len = 0;
 
             for field in _fields{
-               //fields.push(field.name.as_bytes().len() as u8 + field.); 
+
+                //name
+                fields.push(field.name.len() as u8);
+                fields.extend_from_slice(field.name.as_bytes());
+
+                fields.push(field.is_FK as u8);
+
+                //type
+                fields.push(field.type_.len() as u8);
+                fields.extend_from_slice(field.type_.as_bytes());
             }
 
             match File::create(path){
