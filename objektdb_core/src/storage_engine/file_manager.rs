@@ -1,7 +1,7 @@
 use std::fs::{File, self};
 use std::io::{Read, Write};
 use std::path::{Path};
-use super::field::Field;
+use super::super::support_mods::{field::*};
 use std::{env};
 
 
@@ -253,6 +253,13 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 //type
                 fields.push(field.type_.len() as u8);
                 fields.extend_from_slice(field.type_.as_bytes());
+            }
+            
+            let mut methods: Vec<u8> = Vec::new();
+            
+            for method in _methods_names{
+                methods.push(method.len() as u8);
+                methods.extend_from_slice(method.as_bytes());
             }
 
             match File::create(path){
