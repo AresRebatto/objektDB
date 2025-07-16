@@ -212,12 +212,11 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
             if name_bytes_raw.len() > 64 {
                 return Err("Table name is too long, must be 64 bytes or less".to_string());
             }
-
-            let mut name_bytes: Vec<u8> = Vec::with_capacity(64);
+            
+            //we use null-padding left
+            let mut name_bytes: Vec<u8> = vec![0u8, 64-_table_name.len() as u8];
             name_bytes.extend_from_slice(name_bytes_raw);
 
-            //we use null-padding right
-            name_bytes.resize(64, 0u8);
 
             let path = format!("{}/{}.tbl",_db_name, _table_name);
             
@@ -228,9 +227,10 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
             references_field.push(_ref.len() as u8);
 
             for r in &_ref {
-
-                let mut ref_bytes = r.as_bytes().to_vec();
-                ref_bytes.resize(64, 0u8); // pad to 64 bytes
+                
+                //Null padding left
+                let mut ref_bytes = vec![0u8; 64-r.as_bytes().len()];
+                ref_bytes.extend_from_slice(r.as_bytes());
                 references_field.extend_from_slice(&ref_bytes);
 
             }
@@ -240,7 +240,8 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
             
             //length_field+field+is_fk+length_type+type
             let mut fields: Vec<u8> = Vec::new();
-            let mut tot_len = 0;
+
+            let mut tot_len: Vec<u8> = Vec::new();
 
             for field in _fields{
 
@@ -255,8 +256,11 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 fields.extend_from_slice(field.type_.as_bytes());
             }
             
-            let mut methods: Vec<u8> = Vec::new();
+            tot_len.extend_from_slice(&(fields.len() as u16).to_le_bytes());
             
+
+            let mut methods: Vec<u8> = Vec::new();
+
             for method in _methods_names{
                 methods.push(method.len() as u8);
                 methods.extend_from_slice(method.as_bytes());
