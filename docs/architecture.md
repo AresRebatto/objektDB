@@ -86,7 +86,7 @@ BUCKET{
     {
         OID
         Address(In Data section)
-        Address_next_node(in caso di collisioni)
+        Address_next_node(in case of collisions)
     }
 }
 ```
@@ -112,5 +112,9 @@ As you can see, the structure for the `.tbl` file gets complicated, defining sev
 | length_method  | The number of bytes of the type name                                                                                                                                    | 1 byte            |
 | method_name    | The name of the methods of the struct. They'll be used for logging purpose                                                                                              | variable(max 255) |
 
-### Index
-An address will be 3 bytes
+### Index an Bucket
+For each record, the OID is converted using a 16-bit hash function(**FxHasher**) that identifies an address within the index, where in turn is the address of the bucket where the address of the record within the data section is contained, within one of the nodes.
+
+Each address in the index section has a length of **3 bytes**.
+
+Instead, the addresses pointing to the given section in the bucket will have size of **4 bytes** each, while the address to find the next node will be **3 bytes**.
