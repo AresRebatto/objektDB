@@ -68,14 +68,8 @@ HEADER{
     }
 }
 INDEX{
-	
-}
-BUCKET{
-    {
-        OID
-        Address(In Data section)
-        Address_next_node(in caso di collisioni)
-    }
+	address_in_bucket1,
+    address_in_bucket2
 }
 DATA{
 	Istance1{
@@ -86,7 +80,16 @@ DATA{
 }
 
 ```
-
+To handle collisions that may occur while working with index, another file dedicated to containing a bucket `table_name_bucket.bin` is then used. We use a separate file to avoid having to preemptively allocate all the bits needed for the bucket or to avoid switching to a sparse file.
+```json
+BUCKET{
+    {
+        OID
+        Address(In Data section)
+        Address_next_node(in caso di collisioni)
+    }
+}
+```
 As you can see, the structure for the `.tbl` file gets complicated, defining several sections whose contents we are going to examine one by one below:
 
 ### Header
@@ -97,7 +100,7 @@ As you can see, the structure for the `.tbl` file gets complicated, defining sev
 | offset_header  | Where the header ends                                                                                                                                                   | 8 bytes          |
 | offset_index   | The number of bytes from the beginning of the index(i.e., the address following the end of the header) to its end                                                       | 8 bytes           |
 | offset_bucket  | The number of bytes from the beginning of the bucket to its end                                                                                                         | 8 bytes          |
-| last_OID       | It is the last object id assigned. It helps to assign another one faster                                                                                                | 8 bytes          |
+| last_OID       | It is the last object id assigned. It helps to assign another one faster                                                                                                | 3 bytes          |
 | references_num | Number of references to external tables                                                                                                                                 | 1 byte           |
 | struct_name    | The generic name of a structure referenced in the table                                                                                                                 | 64 bytes(per ref)  |
 | length_fields  | The number of bytes from the beginning of the first field to the end of the last, where the methods begin. The end of the methods is where the header offset is instead | 2 bytes           |
@@ -108,3 +111,6 @@ As you can see, the structure for the `.tbl` file gets complicated, defining sev
 | type           | Name of the type. It will be used for casting                                                                                                                           | variable(max 255) |
 | length_method  | The number of bytes of the type name                                                                                                                                    | 1 byte            |
 | method_name    | The name of the methods of the struct. They'll be used for logging purpose                                                                                              | variable(max 255) |
+
+### Index
+An address will be 3 bytes
