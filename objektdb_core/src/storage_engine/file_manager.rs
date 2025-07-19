@@ -1,7 +1,10 @@
+use std::fmt::format;
 use std::fs::{File, self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path};
-use super::super::support_mods::{field::*};
+use crate::support_mods::support_functions;
+
+use super::super::support_mods::{field::*, support_functions::*};
 use std::{env};
 
 
@@ -179,7 +182,13 @@ pub fn create_db(db_name: String) -> Result<(), String> {
 /// # Notes
 /// - The function assumes the database has been initialized using `create_db`.
 /// - `.tbl` files are created inside the same directory as the database.
-pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>, _methods_names: Vec<String>) -> Result<(), String> {
+pub fn create_table(
+    _table_name: String, 
+    _db_name: String, 
+    _ref: Vec<String>, 
+    _fields: Vec<Field>, 
+    _methods_names: Vec<String>
+) -> Result<(), String> {
     
     let current_dir = env::current_dir()
         .map_err(|e| format!("Error getting current directory: {}", e))?;
@@ -228,7 +237,7 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
             name_bytes.extend_from_slice(name_bytes_raw);
 
 
-            let path = format!("{}/{}.tbl",_db_name, _table_name);
+            let path = current_dir.join(format!("{}/{}.tbl",_db_name, _table_name));
             
             //Lenth: 1(8 bit for the num of fields) + num_fields*64
             let mut references_field: Vec<u8> = Vec::new();
@@ -245,7 +254,8 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
 
             }
 
-            
+            support_functions::converter_builder(_ref)
+                .map_err(|e|format!("Error creating file for converting from strings to values: {}", e))?;
             
             //length_field+field+is_fk+length_type+type
             let mut fields: Vec<u8> = Vec::new();
@@ -294,13 +304,17 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 Err(e)=> Err(format!("The table could not be created: {}", e)),
                 Ok(mut f)=>{
 
-                   f.write(&tbl_file)
-                            .map_err(
-                                    |e|format!("Error creating the .tbl file: {}", e)
-                                )?;
+                    f.write(&tbl_file)
+                        .map_err(
+                                |e|format!("Error creating the .tbl file: {}", e)
+                            )?;
+                    File::create(current_dir.join(format!("{}/{}_bucket.bin", _db_name, _table_name) ))
+                        .map_err(|e| format!("Error creating the bucket file: {}", e))?;
                     return Ok(());
                 }
             }
+
+            
 
             
             
