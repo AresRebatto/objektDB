@@ -187,16 +187,6 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 return Err("Maximum number of tables reached (255)".to_string());
             }
 
-            
-            
-            //OFFSET LATER
-            
-            // header len + table num * one table len. (Where we'll start to write in tbl file)
-            //let offset: u8 = 10 + buffer[4] * 148;
-
-
-
-
 
 
             buffer[4] += 1; // Increment the number of tables
@@ -214,7 +204,7 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
             }
             
             //we use null-padding left
-            let mut name_bytes: Vec<u8> = vec![0u8, 64-_table_name.len() as u8];
+            let mut name_bytes: Vec<u8> = vec![0u8; 64-_table_name.len() as usize];
             name_bytes.extend_from_slice(name_bytes_raw);
 
 
@@ -229,18 +219,18 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
             for r in &_ref {
                 
                 //Null padding left
-                let mut ref_bytes = vec![0u8; 64-r.as_bytes().len()];
+                let mut ref_bytes = vec![0u8; 64-r.as_bytes().len() as usize];
                 ref_bytes.extend_from_slice(r.as_bytes());
                 references_field.extend_from_slice(&ref_bytes);
 
             }
 
-            let mut struct_structure: Vec<u8> = Vec::new();
             
             
             //length_field+field+is_fk+length_type+type
             let mut fields: Vec<u8> = Vec::new();
 
+            //length_fields
             let mut tot_len: Vec<u8> = Vec::new();
 
             for field in _fields{
@@ -266,9 +256,27 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 methods.extend_from_slice(method.as_bytes());
             }
 
+            let offset_header = ((76+references_field.len()+fields.len()+methods.len()) as u32).to_le_bytes();
+            
+            let mut header: Vec<u8> = Vec::new();
+
+
+            header.extend_from_slice(&name_bytes);
+            header.extend_from_slice(&offset_header);
+            header.extend_from_slice(&[0u8; 3]);
+            header.extend_from_slice(&references_field);
+            header.extend_from_slice(&fields);
+            header.extend_from_slice(&methods);
+
+            //header+index
+            let tbl_file = [header, vec![0u8; 262144 as usize]].concat();
             match File::create(path){
                 Err(e)=> Err(format!("The table could not be created: {}", e)),
-                Ok(f)=>{
+                Ok(mut f)=>{
+
+                    if let Err(e)= f.write(&tbl_file){
+                        return Err(format!("Error creating the .tbl file: {}", e));
+                    }
                     return Ok(());
                 }
             }

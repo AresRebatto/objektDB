@@ -32,8 +32,6 @@ Instead, a single table is represented by a file with a `.tbl` extension with th
 HEADER{
     struct_name,
     offset_header,
-    offset_index,
-    offset_bucket,
     last_OID
 
     References{
@@ -97,9 +95,7 @@ As you can see, the structure for the `.tbl` file gets complicated, defining sev
 | **Field**      | **Purpose**                                                                                                                                                             | **Dimension**     |
 |----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
 | struct_name    | It's the struct name, so even the database name                                                                                                                         | 64 bytes          |
-| offset_header  | Where the header ends                                                                                                                                                   | 8 bytes          |
-| offset_index   | The number of bytes from the beginning of the index(i.e., the address following the end of the header) to its end                                                       | 8 bytes           |
-| offset_bucket  | The number of bytes from the beginning of the bucket to its end                                                                                                         | 8 bytes          |
+| offset_header  | Where the header ends                                                                                                                                                   | 4 bytes          |
 | last_OID       | It is the last object id assigned. It helps to assign another one faster                                                                                                | 3 bytes          |
 | references_num | Number of references to external tables                                                                                                                                 | 1 byte           |
 | struct_name    | The generic name of a structure referenced in the table                                                                                                                 | 64 bytes(per ref)  |
