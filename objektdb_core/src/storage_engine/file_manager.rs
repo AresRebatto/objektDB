@@ -1,4 +1,4 @@
-use std::fs::{File, self};
+use std::fs::{File, self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path};
 use super::super::support_mods::{field::*};
@@ -101,70 +101,84 @@ pub fn create_db(db_name: String) -> Result<(), String> {
 }
 
 
-/// Creates a new table in the specified database.
-/// 
-/// This function initializes a new table within an existing database file.
-/// It checks if the database file exists and is in the correct format: in case
-/// it is not, it returns an error.
-/// Before creating the table, please ensure that the database file has been created using
-/// the `create_db()` function.
-/// One table has the following format:
-/// ```json
-/// HEADER{
-///	    struct_name,
-///	    OffsetHeader,
-///	    OffsetIndex,
-///	    OffsetBucket,
-///     last_OID
-///	    References{
-///         references_n
-///	    	ClassName1,(max 64 bytes)
-///	    	ClassName2
-///	    }
-///	    StructStructure{
-///	    	(In the data section will be added OID on the top for every istance
-///         as a u32)
-///         length(for switch directly to method
-///             names without reading all fields
-///             and their length)
-///         {
-///             length (2 byte)
-///             field1
-///             is_fk
-///             type
-///         }
-///	        {
-///             length
-///             field2
-///             is_fk
-///             type         
-///         }
-///         {
-///             length (8 byte)
-///             methodname1
-///         }
-///         {
-///             length
-///             methodname2
-///         }
-///	    }
-///}
-/// ```
+/// Creates a new table within an existing objektDB database.
+///
+/// This function appends a new table to an existing database file (`.db`)
+/// and creates a corresponding `.tbl` file containing the table's metadata and schema.
+///
+/// The database file is updated as follows:
+/// - Byte 4 of the `.db` file is incremented to reflect the number of tables (max 255).
+///
+/// The `.tbl` file is structured as follows:
+/// - Table name: 64 bytes, left-padded with null bytes (`\0`)
+/// - Offset to data section: 4 bytes, little-endian `u32`
+/// - Reserved: 3 bytes (currently unused)
+/// - References: 
+///   - 1 byte for the number of references
+///   - Each reference name: 64 bytes (left null-padded)
+/// - Fields:
+///   - For each field:
+///     - Name length (1 byte)
+///     - Name (variable)
+///     - is_FK flag (1 byte)
+///     - Type length (1 byte)
+///     - Type name (variable)
+/// - Methods:
+///   - For each method:
+///     - Name length (1 byte)
+///     - Name (variable)
+/// - Data section: pre-allocated space (256 KB) reserved for future data and index
+///
 /// # Arguments
-/// * `_table_name` - The name of the table to be created.
-/// * `_db_name` - The name of the database where the table will be created (without the `.db` extension).
+///
+/// * `_table_name` - The name of the table to create (max 64 characters).
+/// * `_db_name` - The name of the existing database (used to locate the `.db` file).
+/// * `_ref` - A list of table names this table references (foreign keys).
+/// * `_fields` - A list of `Field` structs defining the table's schema.
+/// * `_methods_names` - A list of method names associated with the table.
+///
 /// # Returns
-/// * `Ok(())` if the table was successfully created.
-/// * `Err(String)` if the database file does not exist, is invalid, or if an error occurred during the process.
+///
+/// * `Ok(())` on success.
+/// * `Err(String)` if the table could not be created due to I/O issues, table name length,
+///   or invalid database file format.
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - The database file does not exist or is malformed.
+/// - The maximum number of tables (255) is reached.
+/// - The table name exceeds 64 bytes.
+/// - I/O errors occur during file read/write operations.
+///
 /// # Example
 /// ```ignore
-/// use objektDB::storage_engine::file_manager::create_table;
-/// match create_table(String::from("my_table"), String::from("my_database")) {
-///    Ok(_) => println!("Table created successfully!"),
-///    Err(e) => println!("Error creating table: {}", e),
-/// }
+/// let fields = vec![
+///     Field {
+///         name: "id".to_string(),
+///         is_FK: false,
+///         type_: "int".to_string(),
+///     },
+///     Field {
+///         name: "name".to_string(),
+///         is_FK: false,
+///         type_: "string".to_string(),
+///     },
+/// ];
+///
+/// let result = create_table(
+///     "users".to_string(),
+///     "my_database".to_string(),
+///     vec![],
+///     fields,
+///     vec!["to_json".to_string()]
+/// );
+/// assert!(result.is_ok());
 /// ```
-/// 
+///
+/// # Notes
+/// - The function assumes the database has been initialized using `create_db`.
+/// - `.tbl` files are created inside the same directory as the database.
 pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>, _methods_names: Vec<String>) -> Result<(), String> {
     
     let current_dir = env::current_dir()
@@ -176,10 +190,16 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
     // Check if the database file exists
     if Path::new(&path).exists() {
 
-        let mut file: File = File::open(&path).map_err(|e| format!("Error opening database file: {}", e))?;
+        let mut file: File = OpenOptions::new()
+                                .read(true)
+                                .write(true)
+                                .open(&path)
+                                .map_err(|e| format!("Error opening database file: {}", e))?;;
+        
         let mut buffer: Vec<u8> = Vec::new();
 
-        file.read(&mut buffer).map_err(|e| format!("Error reading database file: {}", e))?;
+        file.read(&mut buffer)
+            .map_err(|e| format!("Error reading database file: {}", e))?;
 
         if buffer[0..4] == MAGIC_NUMBER.to_le_bytes() {
             
@@ -274,9 +294,10 @@ pub fn create_table(_table_name: String, _db_name: String, _ref: Vec<String>, _f
                 Err(e)=> Err(format!("The table could not be created: {}", e)),
                 Ok(mut f)=>{
 
-                    if let Err(e)= f.write(&tbl_file){
-                        return Err(format!("Error creating the .tbl file: {}", e));
-                    }
+                   f.write(&tbl_file)
+                            .map_err(
+                                    |e|format!("Error creating the .tbl file: {}", e)
+                                )?;
                     return Ok(());
                 }
             }
