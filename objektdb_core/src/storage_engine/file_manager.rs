@@ -1,4 +1,3 @@
-use std::fmt::format;
 use std::fs::{File, self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path};
@@ -203,11 +202,11 @@ pub fn create_table(
                                 .read(true)
                                 .write(true)
                                 .open(&path)
-                                .map_err(|e| format!("Error opening database file: {}", e))?;;
+                                .map_err(|e| format!("Error opening database file: {}", e))?;
         
         let mut buffer: Vec<u8> = Vec::new();
 
-        file.read(&mut buffer)
+        file.read_to_end(&mut buffer)
             .map_err(|e| format!("Error reading database file: {}", e))?;
 
         if buffer[0..4] == MAGIC_NUMBER.to_le_bytes() {
