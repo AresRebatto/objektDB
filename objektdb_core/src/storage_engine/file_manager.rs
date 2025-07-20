@@ -7,8 +7,6 @@ use super::super::support_mods::{field::*, support_functions::*};
 use std::{env};
 
 
-//DA RIVEDERE TUTTA LA DOCUMENTAZIONE IN TESTA AI METODI
-
 
 /// Magic number that identifies the custom database file format.
 ///
@@ -285,7 +283,7 @@ pub fn create_table(
                 methods.extend_from_slice(method.as_bytes());
             }
 
-            let offset_header = ((76+references_field.len()+fields.len()+methods.len()) as u32).to_le_bytes();
+            let offset_header: [u8; 4] = ((76+references_field.len()+fields.len()+methods.len()) as u32).to_le_bytes();
             
             let mut header: Vec<u8> = Vec::new();
 
@@ -325,7 +323,6 @@ pub fn create_table(
     }
 }
 
-
 /// Deletes the specified database file from the filesystem.
 ///
 /// This function attempts to remove the database file with the given name.
@@ -351,6 +348,8 @@ pub fn create_table(
 ///     Err(e) => println!("Error deleting database: {}", e),
 /// }
 /// ```
+/// 
+/// NOT COMPLETE
 pub fn delete_db(db_name: String) -> Result<(), String> {
     let db_name = db_name;
     let db_path = format!("{}/{}.db", db_name, db_name);

@@ -3,6 +3,7 @@ mod traits;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr};
+use objektdb_core::storage_engine::file_manager;
 
 #[proc_macro_attribute]
 pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
@@ -33,42 +34,37 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 ///    age: u32,
 /// }
 #[proc_macro_attribute]
-pub fn objekt(_attr: TokenStream, _item    : TokenStream) -> TokenStream {
-    let input = parse_macro_input!(_item as ItemStruct);
+pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as ItemStruct);
     let struct_name = &input.ident;
 
-     let db_name_lit = parse_macro_input!(_attr as LitStr);
+    let mut fields: Vec<(syn::Ident, syn::Type)> = Vec::new();
+    
+    match &input.fields {
+        syn::Fields::Named(field) => {
+            for f in field.named.iter() {
+                let f_name = f.ident.clone().unwrap();
+                let f_type = f.ty.clone();
+                fields.push((f_name, f_type));
+            }
+        },
+        _ => panic!("The #[objekt] macro can only be used with structures with named fields"),
+    }
+
+    let db_name_lit = parse_macro_input!(attr as LitStr);
     let db_name = db_name_lit.value();
 
+    file_manager::create_db(&db_name);
 
-    //Qui sarà necessario chiamare la funzione che crea il database
-
+    let params = fields.iter().map(|(name, ty)| quote! { #name: #ty });
 
     let expanded = quote::quote! {
         #input
 
-        impl traits::CRUD for #struct_name {
-            //da rivedere
-            fn select() -> Vec<Self> {
-                helper::select::<#struct_name>(&#db_name)
-            }
-
-            fn save(&self) -> Result<(), String> {
-                helper::save(self, &#db_name)
-            }
-
-            fn filter<F>(&self, condition: F) -> Vec<Self>
-            where
-                F: Fn(&Self) -> bool,
-            {
-                helper::filter(self, condition)
-            }
-
-            fn delete(&self) -> Result<(), String> {
-                helper::delete(self, &#db_name)
+        impl #struct_name {
+            pub fn new( #( #params ),* ) -> Result<(), String> {
             }
         }
-
     };
 
     TokenStream::from(expanded)
