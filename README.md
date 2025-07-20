@@ -35,7 +35,7 @@ objektdb = "0.1"
 Then import it in your Rust code:
 
 ```rust
-use objektdb;
+use objektdb::{objektdb_core::storage_engine::*, objektdb_macros::*};;
 ```
 
 ### Usage

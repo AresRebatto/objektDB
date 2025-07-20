@@ -53,16 +53,22 @@ pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let db_name_lit = parse_macro_input!(attr as LitStr);
     let db_name = db_name_lit.value();
-
-    file_manager::create_db(&db_name);
+    
 
     let params = fields.iter().map(|(name, ty)| quote! { #name: #ty });
 
     let expanded = quote::quote! {
+        
         #input
 
         impl #struct_name {
+
             pub fn new( #( #params ),* ) -> Result<(), String> {
+                let _ = file_manager::create_db(#db_name.to_string());
+                //file_manager::create_table();
+
+                Ok(())
+                
             }
         }
     };
