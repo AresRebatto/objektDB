@@ -1,9 +1,9 @@
 /user_tests
 /target
-/objectdb_core/target
-/objectdb_macros/target
-/objectdb_core/.gitignore
-/objectdb_macros/.
+/objektdb_core/target
+/objektdb_macros/target
+/objektdb_core/.gitignore
+/objektdb_macros/.
 
 target/
 **/target/
