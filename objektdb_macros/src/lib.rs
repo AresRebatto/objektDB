@@ -38,7 +38,8 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemStruct);
-    let struct_name = LitStr::new(&input.ident.to_string(), proc_macro2::Span::call_site());
+    let struct_name = &input.ident;
+    let lit_struct_name = LitStr::new(&input.ident.to_string(), proc_macro2::Span::call_site());
 
     let mut fields: Vec<(String, String)> = Vec::new();
 
@@ -68,7 +69,7 @@ pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
         impl #struct_name {
 
             pub fn new( #( #params ),* ) -> Result<(), String> {
-                let _ = file_manager::create_db(#db_name_lit.to_string());
+                let _ = objektdb::objektdb_core::storage_engine::file_manager::create_db(#db_name_lit.to_string());
                 let references: Vec<String> = Vec::new();
                 #(
                     if objektdb::objektdb_core::support_mods::support_functions::find_references(#lit_types.to_string())
@@ -78,7 +79,7 @@ pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
                 )*
 
                 file_manager::create_table(
-                    #struct_name.to_string(),
+                    #lit_struct_name.to_string(),
                     #db_name_lit.to_string()
                 );
 
