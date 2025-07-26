@@ -3,10 +3,6 @@
 version = 4
 
 [[package]]
-name = "macro_support"
-version = "0.1.0"
-
-[[package]]
 name = "objektdb"
 version = "0.1.0"
 dependencies = [
@@ -23,6 +19,7 @@ name = "objektdb_macros"
 version = "0.1.0"
 dependencies = [
  "objektdb_core",
+ "proc-macro2",
  "quote",
  "syn",
 ]

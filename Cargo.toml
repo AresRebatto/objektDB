@@ -8,7 +8,7 @@ objektdb_core = {path = "objektdb_core"}
 objektdb_macros = {path = "objektdb_macros"}
 
 [workspace]
-members = [ "macro_support",
+members = [
     "objektdb_core",
     "objektdb_macros"
 ]

@@ -1,9 +1,11 @@
 mod traits;
 
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr};
 use objektdb_core::storage_engine::file_manager;
+use proc_macro2;
+use syn::ext::IdentExt;
 
 #[proc_macro_attribute]
 pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
@@ -26,7 +28,7 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 /// - `where()`
 /// - `delete()`
 /// # Example
-/// ```
+/// ```ignore
 /// use objektDB::*;
 /// #[objekt("my_database.db")]
 /// struct Person {
@@ -36,36 +38,49 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemStruct);
-    let struct_name = &input.ident;
+    let struct_name = LitStr::new(&input.ident.to_string(), proc_macro2::Span::call_site());
 
-    let mut fields: Vec<(syn::Ident, syn::Type)> = Vec::new();
-    
+    let mut fields: Vec<(String, String)> = Vec::new();
+
     match &input.fields {
         syn::Fields::Named(field) => {
             for f in field.named.iter() {
-                let f_name = f.ident.clone().unwrap();
-                let f_type = f.ty.clone();
+                let f_name = f.ident.as_ref().unwrap().to_string();
+                let f_type = f.ty.to_token_stream().to_string();
                 fields.push((f_name, f_type));
             }
         },
         _ => panic!("The #[objekt] macro can only be used with structures with named fields"),
     }
 
-    let db_name_lit = parse_macro_input!(attr as LitStr);
-    let db_name = db_name_lit.value();
+    let lit_types: Vec<LitStr> = fields
+        .iter()
+        .map(|(_, v)| LitStr::new(v, proc_macro2::Span::call_site()))
+        .collect();
+    let db_name_lit: LitStr = parse_macro_input!(attr as LitStr);
     
 
     let params = fields.iter().map(|(name, ty)| quote! { #name: #ty });
-
     let expanded = quote::quote! {
-        
+        use objektdb::objektdb_core::{storage_engine}
         #input
 
         impl #struct_name {
 
             pub fn new( #( #params ),* ) -> Result<(), String> {
-                let _ = file_manager::create_db(#db_name.to_string());
-                //file_manager::create_table();
+                let _ = file_manager::create_db(#db_name_lit.to_string());
+                let references: Vec<String> = Vec::new();
+                #(
+                    if objektdb::objektdb_core::support_mods::support_functions::find_references(#lit_types.to_string())
+                    {
+                        references.push(#lit_types.to_string());
+                    }
+                )*
+
+                file_manager::create_table(
+                    #struct_name.to_string(),
+                    #db_name_lit.to_string()
+                );
 
                 Ok(())
                 
