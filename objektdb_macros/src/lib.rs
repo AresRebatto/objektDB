@@ -2,7 +2,7 @@ mod traits;
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr, parse_str, Ident, Type};
+use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr, parse_str, Ident, Type, PathArguments, GenericArgument};
 use objektdb_core::storage_engine::file_manager;
 use proc_macro2;
 use syn::ext::IdentExt;
@@ -64,6 +64,26 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
                         .to_token_stream()
                         .to_string()
                 ));
+
+                //Verify that the field type is set and extract the generic type
+                if let Type::Path(ty_path) = &f_type{
+
+                    if let Some(seg) = ty_path.path.segments.last(){
+
+                        if seg.ident == "Set"{
+
+                            if let PathArguments::AngleBracketed(args) = &seg.arguments{
+
+                                if let Some(GenericArgument::Type(inner_ty)) = args.args.first(){
+                                    sets_type.push(inner_ty.clone());
+                                }
+                            }
+
+                        }else{
+                            panic!("Fields in a struct that use #[odb] must always be of type Set<T>")
+                        }
+                    }
+                }
 
 
             }
