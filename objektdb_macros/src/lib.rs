@@ -2,7 +2,7 @@ mod traits;
 
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr};
+use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr, parse_str, Ident, Type};
 use objektdb_core::storage_engine::file_manager;
 use proc_macro2;
 use syn::ext::IdentExt;
@@ -35,20 +35,37 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 ///    name: String,
 ///    age: u32,
 /// }
-#[proc_macro_attribute]
+#[proc_macro_attribute] //Need to change to derive macro(Change in architecture)
 pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
+    todo!()
+
+}
+
+#[proc_macro_attribute]
+pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
+
     let input = parse_macro_input!(item as ItemStruct);
     let struct_name = &input.ident;
-    let lit_struct_name = LitStr::new(&input.ident.to_string(), proc_macro2::Span::call_site());
-
     let mut fields: Vec<(String, String)> = Vec::new();
+
+    //fields will be Set<T> type. Here we'll put T
+    let mut sets_type: Vec<Type> = Vec::new();
 
     match &input.fields {
         syn::Fields::Named(field) => {
             for f in field.named.iter() {
-                let f_name = f.ident.as_ref().unwrap().to_string();
-                let f_type = f.ty.to_token_stream().to_string();
-                fields.push((f_name, f_type));
+                let f_name = &f.ident;
+                let f_type = &f.ty;
+                fields.push((
+                    f_name.as_ref()
+                        .unwrap()
+                        .to_string(),
+                    f_type
+                        .to_token_stream()
+                        .to_string()
+                ));
+
+
             }
         },
         _ => panic!("The #[objekt] macro can only be used with structures with named fields"),
@@ -58,37 +75,37 @@ pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
         .iter()
         .map(|(_, v)| LitStr::new(v, proc_macro2::Span::call_site()))
         .collect();
-    let db_name_lit: LitStr = parse_macro_input!(attr as LitStr);
-    
 
-    let params = fields.iter().map(|(name, ty)| quote! { #name: #ty });
-    let expanded = quote::quote! {
-        use objektdb::objektdb_core::{storage_engine}
+    let types = fields.iter().map(|(name_str, ty_str)| {
+        let ident = Ident::new(name_str, proc_macro2::Span::call_site());
+        let ty: Type = parse_str(ty_str).expect("Failed to parse type");
+        quote! { #ty }
+    });
+    let db_name_lit: LitStr = parse_macro_input!(attr as LitStr);
+
+
+
+    let params = fields.iter().map(|(name_str, ty_str)| {
+        let ident = Ident::new(name_str, proc_macro2::Span::call_site());
+        let ty: Type = parse_str(ty_str).expect("Failed to parse type");
+        quote! { #ident: #ty }
+    });
+    TokenStream::from(quote::quote!{
         #input
 
         impl #struct_name {
 
-            pub fn new( #( #params ),* ) -> Result<(), String> {
-                let _ = objektdb::objektdb_core::storage_engine::file_manager::create_db(#db_name_lit.to_string());
-                let references: Vec<String> = Vec::new();
-                #(
-                    if objektdb::objektdb_core::support_mods::support_functions::find_references(#lit_types.to_string())
-                    {
-                        references.push(#lit_types.to_string());
-                    }
-                )*
-
-                file_manager::create_table(
-                    #lit_struct_name.to_string(),
-                    #db_name_lit.to_string()
-                );
+            ///Create db
+            pub fn new()-> Result<(), String>{
+                objektdb::objektdb_core::storage_engine::file_manager::create_db(#db_name_lit.to_string());
 
                 Ok(())
-                
             }
         }
-    };
 
-    TokenStream::from(expanded)
+    })
+
+
 }
+
 

@@ -4,6 +4,7 @@
 /// The Field type represents, as the name 
 pub mod field;
 
-///The `support_functions` module provides a set of functions useful for 
+///The `support_functions` module provides a set of functions useful for
 /// general operation and support for the project.
 pub mod support_functions;
+pub mod set;
