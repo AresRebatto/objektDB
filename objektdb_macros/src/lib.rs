@@ -1,11 +1,20 @@
-mod traits;
-
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, DeriveInput, ItemStruct, LitStr, parse_str, Ident, Type, PathArguments, GenericArgument};
-use objektdb_core::storage_engine::file_manager;
+use syn::{
+    parse_macro_input,
+    parse_str,
+    Data,
+    DeriveInput,
+    Fields,
+    GenericArgument,
+    Ident,
+    ItemStruct,
+    LitStr,
+    PathArguments,
+    Type
+};
 use proc_macro2;
-use syn::ext::IdentExt;
+use proc_macro2::Span;
 
 #[proc_macro_attribute]
 pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
@@ -35,9 +44,38 @@ pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
 ///    name: String,
 ///    age: u32,
 /// }
-#[proc_macro_attribute] //Need to change to derive macro(Change in architecture)
-pub fn objekt(attr: TokenStream, item: TokenStream) -> TokenStream {
-    todo!()
+#[proc_macro_derive(Objekt)] //Need to change to derive macro(Change in architecture)
+pub fn objekt_derive(input: TokenStream) -> TokenStream {
+
+    let item = parse_macro_input!(input as DeriveInput);
+    let name = &item.ident;
+
+    let field_type_literals: Vec<LitStr> = if let Data::Struct(data) = &item.data {
+        if let Fields::Named(named) = &data.fields {
+            named.named.iter().map(|f| {
+                let ty = &f.ty;
+                let base = if let syn::Type::Path(type_path) = ty {
+                    type_path.path.segments.first().unwrap().ident.to_string()
+                } else {
+                    quote!{#ty}.to_string()
+                };
+                LitStr::new(&base, Span::call_site())
+            }).collect()
+        } else {
+            panic!("Only named fields are supported");
+        }
+    } else {
+        panic!("Only structs are supported");
+    };
+    let expanded = quote! {
+        impl objektdb::objektdb_core::traits::objekt::Objekt for #name{
+            fn get_field_types() -> Vec<String>{
+                vec![#(#field_type_literals.to_string()),*]
+            }
+        }
+    };
+
+    expanded.into()
 
 }
 
