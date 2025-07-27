@@ -84,69 +84,56 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
 
     let input = parse_macro_input!(item as ItemStruct);
     let struct_name = &input.ident;
-    let mut fields: Vec<(String, String)> = Vec::new();
+    let db_name_lit: LitStr = parse_macro_input!(attr as LitStr);
+
 
     //fields will be Set<T> type. Here we'll put T
-    let mut sets_type: Vec<Type> = Vec::new();
+    let mut set_types: Vec<Type> = Vec::new();
+    let mut set_types_literal: Vec<LitStr> = Vec::new();
+    let mut params: Vec<proc_macro2::TokenStream> = Vec::new();
 
     match &input.fields {
         syn::Fields::Named(field) => {
             for f in field.named.iter() {
+
                 let f_name = &f.ident;
                 let f_type = &f.ty;
-                fields.push((
-                    f_name.as_ref()
-                        .unwrap()
-                        .to_string(),
-                    f_type
-                        .to_token_stream()
-                        .to_string()
-                ));
+                params.push(quote!{#f_name: #f_type});
 
-                //Verify that the field type is set and extract the generic type
+
                 if let Type::Path(ty_path) = &f_type{
-
-                    if let Some(seg) = ty_path.path.segments.last(){
-
-                        if seg.ident == "Set"{
-
-                            if let PathArguments::AngleBracketed(args) = &seg.arguments{
-
-                                if let Some(GenericArgument::Type(inner_ty)) = args.args.first(){
-                                    sets_type.push(inner_ty.clone());
-                                }
+                    if let Some(segment) = ty_path.path.segments.last() {
+                        if let PathArguments::AngleBracketed(ref generics) = segment.arguments {
+                            if let Some(GenericArgument::Type(inner_ty)) = generics.args.first() {
+                                set_types.push(inner_ty.clone());
                             }
-
-                        }else{
-                            panic!("Fields in a struct that use #[odb] must always be of type Set<T>")
                         }
                     }
                 }
-
-
             }
         },
         _ => panic!("The #[objekt] macro can only be used with structures with named fields"),
     }
 
-    let lit_types: Vec<LitStr> = fields
-        .iter()
-        .map(|(_, v)| LitStr::new(v, proc_macro2::Span::call_site()))
-        .collect();
+    set_types_literal = set_types.iter().map(|t|{
+        LitStr::new(
+            t.to_token_stream()
+                .to_string()
+                .as_ref(), proc_macro2::
+            Span::call_site())
+    }).collect();
 
-    let types = fields.iter().map(|(name_str, ty_str)| {
-        let ident = Ident::new(name_str, proc_macro2::Span::call_site());
-        let ty: Type = parse_str(ty_str).expect("Failed to parse type");
-        quote! { #ty }
-    });
-    let db_name_lit: LitStr = parse_macro_input!(attr as LitStr);
-
-
-
-    let params = fields.iter().map(|(name_str, ty_str)| {
-        let ident = Ident::new(name_str, proc_macro2::Span::call_site());
-        let ty: Type = parse_str(ty_str).expect("Failed to parse type");
-        quote! { #ident: #ty }
+    let blocks = set_types.iter().zip(set_types_literal.iter()).map(|(t, lit)| {
+        quote! {
+        for field in #t::get_field_types() {
+            match field {
+                #lit => {
+                    references.push(field.clone());
+                },
+                _ => {}
+            }
+        }
+    }
     });
     TokenStream::from(quote::quote!{
         #input
@@ -157,6 +144,10 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
             pub fn new()-> Result<(), String>{
                 objektdb::objektdb_core::storage_engine::file_manager::create_db(#db_name_lit.to_string());
 
+                let mut references: Vec<String> = Vec::new();
+                let mut set_types: Vec<String> = Vec::new();
+
+                #(#blocks)*
                 Ok(())
             }
         }
