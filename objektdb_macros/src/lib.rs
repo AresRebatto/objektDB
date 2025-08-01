@@ -56,6 +56,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                 let ty = &f.ty;
                 let base = if let syn::Type::Path(type_path) = ty {
                     type_path.path.segments.first().unwrap().ident.to_string()
+
                 } else {
                     quote!{#ty}.to_string()
                 };
@@ -90,6 +91,7 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
     //fields will be Set<T> type. Here we'll put T
     let mut set_types: Vec<Type> = Vec::new();
     let mut set_types_literal: Vec<LitStr> = Vec::new();
+
     let mut params: Vec<proc_macro2::TokenStream> = Vec::new();
 
     match &input.fields {
@@ -104,8 +106,23 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
                 if let Type::Path(ty_path) = &f_type{
                     if let Some(segment) = ty_path.path.segments.last() {
                         if let PathArguments::AngleBracketed(ref generics) = segment.arguments {
+
                             if let Some(GenericArgument::Type(inner_ty)) = generics.args.first() {
-                                set_types.push(inner_ty.clone());
+
+                                let mut already_exists = false;
+                                let inner_ty_str = quote!(#inner_ty).to_string();
+
+                                //Check that the value is not already present in set _types.
+                                for ty in &set_types {
+                                    if quote!(#ty).to_string() == inner_ty_str {
+                                        already_exists = true;
+                                        break;
+                                    }
+                                }
+
+                                if !already_exists{
+                                    set_types.push(inner_ty.clone());
+                                }
                             }
                         }
                     }
@@ -123,33 +140,36 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
             Span::call_site())
     }).collect();
 
+
     let blocks = set_types.iter().zip(set_types_literal.iter()).map(|(t, lit)| {
         quote! {
-        for field in #t::get_field_types() {
-            match field {
-                #lit => {
+            for field in #t::get_field_types() {
+                if field == #lit {
                     references.push(field.clone());
-                },
-                _ => {}
+                }
             }
         }
-    }
     });
+
     TokenStream::from(quote::quote!{
         #input
 
         impl #struct_name {
 
-            ///Create db
+            ///Create db and tables
             pub fn new()-> Result<(), String>{
                 objektdb::objektdb_core::storage_engine::file_manager::create_db(#db_name_lit.to_string());
 
                 let mut references: Vec<String> = Vec::new();
                 let mut set_types: Vec<String> = Vec::new();
+                //let mut fields: Vec<String> = Vec::new();
 
                 #(#blocks)*
+                //#(fields.push(#set_types_literal.to_string());)*
+
                 Ok(())
             }
+            
         }
 
     })
