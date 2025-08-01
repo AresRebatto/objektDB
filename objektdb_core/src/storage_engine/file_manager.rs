@@ -66,7 +66,7 @@ pub const MAGIC_NUMBER: u32 = 0x4D594442;
 /// - The database directory will be created in the current working directory.
 /// - If an error occurs after the directory is created but before the file is written, the directory may remain on disk.
 pub fn create_db(db_name: String) -> Result<(), String> {
-    //Work directory of developer
+    //Work directory on developer dir
     let current_dir = env::current_dir()
         .map_err(|e| format!("Error getting current directory: {}", e))?;
 
@@ -190,6 +190,7 @@ pub fn create_table(
     let current_dir = env::current_dir()
         .map_err(|e| format!("Error getting current directory: {}", e))?;
 
+
     //CHANGES TO DB FILE
     let path = current_dir.join(format!("{}/{}.db", _db_name, _db_name));
 
@@ -208,118 +209,109 @@ pub fn create_table(
             .map_err(|e| format!("Error reading database file: {}", e))?;
 
         if buffer[0..4] == MAGIC_NUMBER.to_le_bytes() {
-            
             if buffer[4] >= 255 {
                 return Err("Maximum number of tables reached (255)".to_string());
             }
 
 
-
             buffer[4] += 1; // Increment the number of tables
 
             let _ = file.write(&buffer);
-
-
-            //CHANGES TO TBL FILE
-            
-            //convert to UTF-8
-            let name_bytes_raw: &[u8] = _table_name.as_bytes();
-
-            if name_bytes_raw.len() > 64 {
-                return Err("Table name is too long, must be 64 bytes or less".to_string());
-            }
-            
-            //we use null-padding left
-            let mut name_bytes: Vec<u8> = vec![0u8; 64-_table_name.len() as usize];
-            name_bytes.extend_from_slice(name_bytes_raw);
-
-
-            let path = current_dir.join(format!("{}/{}.tbl",_db_name, _table_name));
-            
-            //Lenth: 1(8 bit for the num of fields) + num_fields*64
-            let mut references_field: Vec<u8> = Vec::new();
-
-            //First byte is num of references
-            references_field.push(_ref.len() as u8);
-
-            for r in &_ref {
-                
-                //Null padding left
-                let mut ref_bytes = vec![0u8; 64-r.as_bytes().len() as usize];
-                ref_bytes.extend_from_slice(r.as_bytes());
-                references_field.extend_from_slice(&ref_bytes);
-
-            }
-
-            support_functions::converter_builder(_ref)
-                .map_err(|e|format!("Error creating file for converting from strings to values: {}", e))?;
-            
-            //length_field+field+is_fk+length_type+type
-            let mut fields: Vec<u8> = Vec::new();
-
-            //length_fields
-            let mut tot_len: Vec<u8> = Vec::new();
-
-            for field in _fields{
-
-                //name
-                fields.push(field.name.len() as u8);
-                fields.extend_from_slice(field.name.as_bytes());
-
-                fields.push(field.is_FK as u8);
-
-                //type
-                fields.push(field.type_.len() as u8);
-                fields.extend_from_slice(field.type_.as_bytes());
-            }
-            
-            tot_len.extend_from_slice(&(fields.len() as u16).to_le_bytes());
-            
-
-            let mut methods: Vec<u8> = Vec::new();
-
-            for method in _methods_names{
-                methods.push(method.len() as u8);
-                methods.extend_from_slice(method.as_bytes());
-            }
-
-            let offset_header: [u8; 4] = ((76+references_field.len()+fields.len()+methods.len()) as u32).to_le_bytes();
-            
-            let mut header: Vec<u8> = Vec::new();
-
-
-            header.extend_from_slice(&name_bytes);
-            header.extend_from_slice(&offset_header);
-            header.extend_from_slice(&[0u8; 3]);
-            header.extend_from_slice(&references_field);
-            header.extend_from_slice(&fields);
-            header.extend_from_slice(&methods);
-
-            //header+index
-            let tbl_file = [header, vec![0u8; 262144 as usize]].concat();
-            match File::create(path){
-                Err(e)=> Err(format!("The table could not be created: {}", e)),
-                Ok(mut f)=>{
-
-                    f.write(&tbl_file)
-                        .map_err(
-                                |e|format!("Error creating the .tbl file: {}", e)
-                            )?;
-                    File::create(current_dir.join(format!("{}/{}_bucket.bin", _db_name, _table_name) ))
-                        .map_err(|e| format!("Error creating the bucket file: {}", e))?;
-                    return Ok(());
-                }
-            }
-
-            
-
-            
             
         }else{
             return Err("Invalid database file format".to_string());
         }
     }else{
         return Err(format!("Database {} does not exist", _db_name));
+    }
+
+
+    //CHANGES TO TBL FILE
+
+
+    //we use null-padding left
+    let mut name_bytes: Vec<u8> = Vec::new();
+    if let Err(e) = padding(&mut name_bytes, _table_name.clone(), 64){
+        return Err("Table name is too long, must be 64 bytes or less".to_string());
+    }
+
+
+
+    let path = current_dir.join(format!("{}/{}.tbl",_db_name, _table_name));
+
+    //Lenth: 1(8 bit for the num of fields) + num_fields*64
+    let mut references_field: Vec<u8> = Vec::new();
+
+    //First byte is num of references
+    references_field.push(_ref.len() as u8);
+
+    for r in &_ref {
+
+        //Null padding left
+        let mut ref_bytes = Vec::new();
+        _ = padding(&mut ref_bytes, r.to_string(), 64);
+        references_field.extend_from_slice(&ref_bytes);
+
+    }
+
+    support_functions::converter_builder(_ref)
+        .map_err(|e|format!("Error creating file for converting from strings to values: {}", e))?;
+
+    //length_field+field+is_fk+length_type+type
+    let mut fields: Vec<u8> = Vec::new();
+
+    //length_fields
+    let mut tot_len: Vec<u8> = Vec::new();
+
+    for field in _fields{
+
+        //name
+        fields.push(field.name.len() as u8);
+        fields.extend_from_slice(field.name.as_bytes());
+
+        fields.push(field.is_FK as u8);
+
+        //type
+        fields.push(field.type_.len() as u8);
+        fields.extend_from_slice(field.type_.as_bytes());
+    }
+
+    tot_len.extend_from_slice(&(fields.len() as u16).to_le_bytes());
+
+
+    let mut methods: Vec<u8> = Vec::new();
+
+    for method in _methods_names{
+        methods.push(method.len() as u8);
+        methods.extend_from_slice(method.as_bytes());
+    }
+
+    let offset_header: [u8; 4] = ((76+references_field.len()+fields.len()+methods.len()) as u32).to_le_bytes();
+
+    let mut header: Vec<u8> = Vec::new();
+
+
+    header.extend_from_slice(&name_bytes);
+    header.extend_from_slice(&offset_header);
+    header.extend_from_slice(&[0u8; 3]);
+    header.extend_from_slice(&references_field);
+    header.extend_from_slice(&fields);
+    header.extend_from_slice(&methods);
+
+    //header+index
+    let tbl_file = [header, vec![0u8; 262144 as usize]].concat();
+    match File::create(path){
+        Err(e)=> Err(format!("The table could not be created: {}", e)),
+        Ok(mut f)=>{
+
+            f.write(&tbl_file)
+                .map_err(
+                    |e|format!("Error creating the .tbl file: {}", e)
+                )?;
+            File::create(current_dir.join(format!("{}/{}_bucket.bin", _db_name, _table_name) ))
+                .map_err(|e| format!("Error creating the bucket file: {}", e))?;
+            return Ok(());
+        }
     }
 }
 
