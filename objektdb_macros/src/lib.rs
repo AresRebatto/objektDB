@@ -1,5 +1,5 @@
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{quote, ToTokens, format_ident};
 use syn::{
     parse_macro_input,
     parse_str,
@@ -151,6 +151,18 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
         }
     });
 
+
+    let convert_trait = format_ident!("{}Convert", struct_name);
+
+    let convert_trait_impl = set_types.iter().map(|t|{
+        quote!{
+            impl #convert_trait for #t{
+                fn convert(val: String, ty: String){
+                    todo!();
+                }
+            }
+        }
+    });
     TokenStream::from(quote::quote!{
         #input
 
@@ -169,8 +181,14 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
 
                 Ok(())
             }
-            
+
         }
+
+        trait #convert_trait{
+            fn convert(val: String, ty: String);
+        }
+        #(#convert_trait_impl)*
+
 
     })
 
