@@ -1,8 +1,9 @@
 <h1 align="center" style="border-bottom : 0;">OBJEKTDB</h1>
 <p align="center"><i>Effortless data management for innovative Rust applications <br/><br/> Built with:</i></p>
 
-<img alt="Rust" src="https://img.shields.io/badge/Rust-000000.svg?style=flat&amp;logo=Rust&amp;logoColor=white" class="inline-block mx-1" style="display: block;
-  margin: auto; ">
+<p align="center">
+  <img alt="Rust" src="https://img.shields.io/badge/Rust-000000.svg?style=flat&logo=Rust&logoColor=white" />
+</p>
 
 <img src="img/banner.png"/>
 
