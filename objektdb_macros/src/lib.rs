@@ -154,15 +154,21 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
 
     let convert_trait = format_ident!("{}Convert", struct_name);
 
-    let convert_trait_impl = set_types.iter().map(|t|{
+    let convert_trait_impl: Vec<_> = set_types.iter().map(|t|{
         quote!{
             impl #convert_trait for #t{
-                fn convert(val: String, ty: String){
+                fn convert_reference(val: String, ty: String)-> Box<KnownTypes>{
                     todo!();
                 }
             }
         }
-    });
+    }).collect();
+
+    let known_types: Vec<_> = set_types.iter().map(|t|{
+        quote! {
+            #t(#t)
+        }
+    }).collect();
     TokenStream::from(quote::quote!{
         #input
 
@@ -184,15 +190,23 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
 
         }
 
-        trait #convert_trait{
-            fn convert(val: String, ty: String);
+        pub trait #convert_trait{
+            fn convert_reference(val: String, ty: String)->Box<KnownTypes>{
+                todo!()
+            };
         }
+
         #(#convert_trait_impl)*
 
+        pub enum KnownTypes{
+            #(#known_types),*
+        }
 
     })
 
 
 }
+
+
 
 
