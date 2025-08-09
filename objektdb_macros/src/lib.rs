@@ -81,46 +81,29 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
-
+pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as ItemStruct);
     let struct_name = &input.ident;
     let db_name_lit: LitStr = parse_macro_input!(attr as LitStr);
 
-
-    //fields will be Set<T> type. Here we'll put T
+    // fields will be Set<T> type. Here we'll put T
     let mut set_types: Vec<Type> = Vec::new();
     let mut set_types_literal: Vec<LitStr> = Vec::new();
-
     let mut params: Vec<proc_macro2::TokenStream> = Vec::new();
 
     match &input.fields {
         syn::Fields::Named(field) => {
             for f in field.named.iter() {
-
                 let f_name = &f.ident;
                 let f_type = &f.ty;
-                params.push(quote!{#f_name: #f_type});
+                params.push(quote! { #f_name: #f_type });
 
-
-                if let Type::Path(ty_path) = &f_type{
+                if let Type::Path(ty_path) = &f_type {
                     if let Some(segment) = ty_path.path.segments.last() {
                         if let PathArguments::AngleBracketed(ref generics) = segment.arguments {
-
                             if let Some(GenericArgument::Type(inner_ty)) = generics.args.first() {
-
-                                let mut already_exists = false;
                                 let inner_ty_str = quote!(#inner_ty).to_string();
-
-                                //Check that the value is not already present in set _types.
-                                for ty in &set_types {
-                                    if quote!(#ty).to_string() == inner_ty_str {
-                                        already_exists = true;
-                                        break;
-                                    }
-                                }
-
-                                if !already_exists{
+                                if !set_types.iter().any(|ty| quote!(#ty).to_string() == inner_ty_str) {
                                     set_types.push(inner_ty.clone());
                                 }
                             }
@@ -128,85 +111,78 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream{
                     }
                 }
             }
-        },
-        _ => panic!("The #[objekt] macro can only be used with structures with named fields"),
+        }
+        _ => panic!("The #[odb] macro can only be used with structures with named fields"),
     }
 
-    set_types_literal = set_types.iter().map(|t|{
-        LitStr::new(
-            t.to_token_stream()
-                .to_string()
-                .as_ref(), proc_macro2::
-            Span::call_site())
-    }).collect();
+    set_types_literal = set_types
+        .iter()
+        .map(|t| {
+            LitStr::new(t.to_token_stream().to_string().as_ref(), Span::call_site())
+        })
+        .collect();
 
+    let blocks = set_types
+        .iter()
+        .zip(set_types_literal.iter())
+        .map(|(t, lit)| {
+            quote! {
+                for field in #t::get_field_types() {
+                    if field == #lit {
+                        references.push(field.clone());
+                    }
+                }
+            }
+        });
 
-    let blocks = set_types.iter().zip(set_types_literal.iter()).map(|(t, lit)| {
+    let convert_trait = format_ident!("{}Convert", struct_name);
+
+    let convert_trait_impls = set_types.iter().map(|t: &Type| {
         quote! {
-            for field in #t::get_field_types() {
-                if field == #lit {
-                    references.push(field.clone());
+            impl #convert_trait for #t {
+                fn convert_reference(val: String, ty: String) -> Box<KnownTypes> {
+                    todo!()
                 }
             }
         }
     });
 
-
-    let convert_trait = format_ident!("{}Convert", struct_name);
-
-    let convert_trait_impl: Vec<_> = set_types.iter().map(|t|{
-        quote!{
-            impl #convert_trait for #t{
-                fn convert_reference(val: String, ty: String)-> Box<KnownTypes>{
-                    todo!();
-                }
-            }
-        }
-    }).collect();
-
-    let known_types: Vec<_> = set_types.iter().map(|t|{
+    let known_types = set_types.iter().map(|t| {
         quote! {
             #t(#t)
         }
-    }).collect();
-    TokenStream::from(quote::quote!{
+    });
+
+    TokenStream::from(quote! {
         #input
 
         impl #struct_name {
-
-            ///Create db and tables
-            pub fn new()-> Result<(), String>{
+            /// Create db and tables
+            pub fn new() -> Result<(), String> {
                 objektdb::objektdb_core::storage_engine::file_manager::create_db(#db_name_lit.to_string());
 
                 let mut references: Vec<String> = Vec::new();
                 let mut set_types: Vec<String> = Vec::new();
-                //let mut fields: Vec<String> = Vec::new();
 
                 #(#blocks)*
-                //#(fields.push(#set_types_literal.to_string());)*
 
                 Ok(())
             }
-
         }
 
-        pub trait #convert_trait{
-            fn convert_reference(val: String, ty: String)->Box<KnownTypes>{
-                todo!()
-            };
-        }
-
-        #(#convert_trait_impl)*
-
-        pub enum KnownTypes{
+        pub enum KnownTypes {
             #(#known_types),*
         }
 
+        pub trait #convert_trait {
+            fn convert_reference(val: String, ty: String) -> Box<KnownTypes> {
+                todo!()
+            }
+        }
+
+        #(#convert_trait_impls)*
     })
-
-
 }
-
 
 
 
