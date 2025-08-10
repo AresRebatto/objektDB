@@ -51,6 +51,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
 
     let item = parse_macro_input!(input as DeriveInput);
     let name = &item.ident;
+    let name_lit_str = LitStr::new(&name.to_string(), Span::call_site());
 
     let field_type_literals: Vec<LitStr> = if let Data::Struct(data) = &item.data {
         if let Fields::Named(named) = &data.fields {
@@ -113,7 +114,22 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                 vec![#(#field_type_literals.to_string()),*]
             }
 
-            fn from_bytes(data: &[u8]) -> Self{
+            fn from_bytes() -> Option<Self>{
+
+                let data: Vec<u8> = objektdb::objektdb_core::storage_engine::file_manager::get_records(#name_lit_str);
+                if !data.is_empty{
+                    let mut field_dimension = data[0];
+                    let mut field_start = 1;
+
+                    while field_start + field_dimension < data.len(){
+
+                        let mut field_buffer = &data[field_start..field_start+field_dimension]; 
+                        field_dimension = data[field_dimension];
+                        field_start = field_dimension+1;
+                    }
+                    
+                }
+                
                 todo!()
             }
 

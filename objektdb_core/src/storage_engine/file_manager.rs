@@ -100,8 +100,8 @@ pub fn create_db(db_name: String) -> Result<(), String> {
     }
 }
 
-
 /// Creates a new table within an existing objektDB database.
+
 ///
 /// This function appends a new table to an existing database file (`.db`)
 /// and creates a corresponding `.tbl` file containing the table's metadata and schema.
@@ -363,5 +363,12 @@ pub fn delete_db(db_name: String) -> Result<(), String> {
 ///
 ///**Caution**: the method deletes all data within the table.
 pub fn reinitialize_table(_table_name: String, _db_name: String, _ref: Vec<String>, _fields: Vec<Field>)-> Result<(), String>{
+    todo!()
+}
+
+
+///[32 bytes of lenght; value; 32 bytes of lenght; value...]
+pub fn get_records(struct_name: String)-> Vec<u8>
+{
     todo!()
 }
