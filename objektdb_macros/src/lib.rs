@@ -15,6 +15,8 @@ use syn::{
 };
 use proc_macro2;
 use proc_macro2::Span;
+use std::collections::HashMap;
+
 
 #[proc_macro_attribute]
 pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
@@ -68,10 +70,55 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
     } else {
         panic!("Only structs are supported");
     };
+
+    let fields_names = if let Data::Struct(data) = &item.data{
+        if let Fields::Named(named_field) = &data.fields{
+            named_field.named.iter().map(|f|{
+                let name = f.ident.as_ref().unwrap();
+                quote!{
+                    #name
+                }
+            })
+        }else{
+            panic!("Only named fields are supported");
+        }
+    }else{
+        panic!("Only structs are supported");
+    };
+
+
+    let fields_types = if let Data::Struct(data) = &item.data{
+        if let Fields::Named(named_field) = &data.fields{
+            named_field.named.iter().map(|f|{
+                let ty = &f.ty;
+                if let syn::Type::Path(type_path) = ty {
+                    type_path.path.segments.first().unwrap().ident.to_token_stream()
+
+                } else {
+                    quote!{#ty}
+                };
+            })
+        }else{
+            panic!("Only named fields are supported");
+        }
+    }else{
+        panic!("Only structs are supported");
+    };
+
+
+
     let expanded = quote! {
         impl objektdb::objektdb_core::traits::objekt::Objekt for #name{
             fn get_field_types() -> Vec<String>{
                 vec![#(#field_type_literals.to_string()),*]
+            }
+
+            fn from_bytes(data: &[u8]) -> Self{
+                todo!()
+            }
+
+            fn to_bytes(&self)-> Vec<u8>{
+                todo!()
             }
         }
     };
@@ -136,12 +183,26 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
         });
 
     let convert_trait = format_ident!("{}Convert", struct_name);
+    
+    let match_body: Vec<_> = set_types_literal
+                                            .iter()
+                                            .zip(set_types.iter())
+                                            .map(|(tl, ty)| {
+                                                quote! {
+                                                    #tl => Box::new(#ty(#ty{
+
+                                                    }))
+                                                }
+                                            })
+                                            .collect();
 
     let convert_trait_impls = set_types.iter().map(|t: &Type| {
         quote! {
             impl #convert_trait for #t {
                 fn convert_reference(val: String, ty: String) -> Box<KnownTypes> {
-                    todo!()
+                    match ty{
+                        #(#match_body),*
+                    }
                 }
             }
         }
@@ -175,9 +236,7 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         pub trait #convert_trait {
-            fn convert_reference(val: String, ty: String) -> Box<KnownTypes> {
-                todo!()
-            }
+            fn convert_reference(val: String, ty: String) -> Box<KnownTypes>;
         }
 
         #(#convert_trait_impls)*
