@@ -15,7 +15,6 @@ use syn::{
 };
 use proc_macro2;
 use proc_macro2::Span;
-use std::collections::HashMap;
 
 
 #[proc_macro_attribute]
@@ -88,21 +87,17 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
     };
 
 
-    let fields_types = if let Data::Struct(data) = &item.data{
-        if let Fields::Named(named_field) = &data.fields{
-            named_field.named.iter().map(|f|{
-                let ty = &f.ty;
-                if let syn::Type::Path(type_path) = ty {
-                    type_path.path.segments.first().unwrap().ident.to_token_stream()
-
-                } else {
-                    quote!{#ty}
-                };
-            })
-        }else{
+    let fields_types: Vec<syn::Type> = if let Data::Struct(data) = &item.data {
+        if let Fields::Named(named_field) = &data.fields {
+            named_field
+                .named
+                .iter()
+                .map(|f| f.ty.clone())   // <-- prendi direttamente il Type
+                .collect()
+        } else {
             panic!("Only named fields are supported");
         }
-    }else{
+    } else {
         panic!("Only structs are supported");
     };
 
@@ -117,18 +112,46 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             fn from_bytes() -> Option<Self>{
 
                 let data: Vec<u8> = objektdb::objektdb_core::storage_engine::file_manager::get_records(#name_lit_str);
-                if !data.is_empty{
-                    let mut field_dimension = data[0];
-                    let mut field_start = 1;
+                
+                //Let's assume that the fields in the buffer are given in the same order as the struct.
+                let mut field_num = 0;
 
-                    while field_start + field_dimension < data.len(){
+                let mut buffer_num = 0;
+                
+                if !data.is_empty(){
+                    let mut start = 0;
+                    loop {
+                        if start >= data.len() {
+                            break;
+                        }
 
-                        let mut field_buffer = &data[field_start..field_start+field_dimension]; 
-                        field_dimension = data[field_dimension];
-                        field_start = field_dimension+1;
+                        let dim = data[start];
+                        let next_start = start + 1;
+                        let end = next_start + dim;
+
+                        if end > data.len() {
+                            break; 
+                        }
+
+                        
+                        
+                        #(
+                            if field_num ==  buffer_num{
+                                let field_value = <#fields_types>::from_le_bytes(&data[next_start..end]);
+                            }
+                            
+
+                            field_num += 1;
+                        )* 
+                        
+                        if end >= data.len() {
+                            break;
+                        }
+                        start = end;
+                        buffer_num+=1;
                     }
                     
-                }
+                }else{None}
                 
                 todo!()
             }
