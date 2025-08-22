@@ -92,7 +92,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             named_field
                 .named
                 .iter()
-                .map(|f| f.ty.clone())   // <-- prendi direttamente il Type
+                .map(|f| f.ty.clone()) 
                 .collect()
         } else {
             panic!("Only named fields are supported");
@@ -101,25 +101,21 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         panic!("Only structs are supported");
     };
 
-
-
     let expanded = quote! {
         impl objektdb::objektdb_core::traits::objekt::Objekt for #name{
             fn get_field_types() -> Vec<String>{
                 vec![#(#field_type_literals.to_string()),*]
             }
 
-            fn from_bytes() -> Option<Self>{
-
-                let data: Vec<u8> = objektdb::objektdb_core::storage_engine::file_manager::get_records(#name_lit_str);
-                
-                //Let's assume that the fields in the buffer are given in the same order as the struct.
+            fn from_bytes(data: Vec<u8>)->Option<Self>{
                 let mut field_num = 0;
 
                 let mut buffer_num = 0;
                 
                 if !data.is_empty(){
+
                     let mut start = 0;
+                    
                     loop {
                         if start >= data.len() {
                             break;
@@ -152,12 +148,6 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                     }
                     
                 }else{None}
-                
-                todo!()
-            }
-
-            fn to_bytes(&self)-> Vec<u8>{
-                todo!()
             }
         }
     };
@@ -208,6 +198,7 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .collect();
 
+    //Insert the references in a vec
     let blocks = set_types
         .iter()
         .zip(set_types_literal.iter())
@@ -221,31 +212,7 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
             }
         });
 
-    let convert_trait = format_ident!("{}Convert", struct_name);
-    
-    let match_body: Vec<_> = set_types_literal
-                                            .iter()
-                                            .zip(set_types.iter())
-                                            .map(|(tl, ty)| {
-                                                quote! {
-                                                    #tl => Box::new(#ty(#ty{
 
-                                                    }))
-                                                }
-                                            })
-                                            .collect();
-
-    let convert_trait_impls = set_types.iter().map(|t: &Type| {
-        quote! {
-            impl #convert_trait for #t {
-                fn convert_reference(val: String, ty: String) -> Box<KnownTypes> {
-                    match ty{
-                        #(#match_body),*
-                    }
-                }
-            }
-        }
-    });
 
     let known_types = set_types.iter().map(|t| {
         quote! {
@@ -273,12 +240,6 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
         pub enum KnownTypes {
             #(#known_types),*
         }
-
-        pub trait #convert_trait {
-            fn convert_reference(val: String, ty: String) -> Box<KnownTypes>;
-        }
-
-        #(#convert_trait_impls)*
     })
 }
 

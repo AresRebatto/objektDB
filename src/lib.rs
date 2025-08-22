@@ -16,5 +16,8 @@ pub use objektdb_core::{
         support_functions::*,
         field::*,
         set::*
+    },
+    traits::{
+        crud
     }
 };
