@@ -108,46 +108,48 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             }
 
             fn from_bytes(data: Vec<u8>)->Option<Self>{
+
+                if data.is_empty(){
+                    return None;
+                }
+
                 let mut field_num = 0;
 
                 let mut buffer_num = 0;
+
+                let mut start = 0;
                 
-                if !data.is_empty(){
-
-                    let mut start = 0;
-                    
-                    loop {
-                        if start >= data.len() {
-                            break;
-                        }
-
-                        let dim = data[start];
-                        let next_start = start + 1;
-                        let end = next_start + dim;
-
-                        if end > data.len() {
-                            break; 
-                        }
-
-                        
-                        
-                        #(
-                            if field_num ==  buffer_num{
-                                let field_value = <#fields_types>::from_le_bytes(&data[next_start..end]);
-                            }
-                            
-
-                            field_num += 1;
-                        )* 
-                        
-                        if end >= data.len() {
-                            break;
-                        }
-                        start = end;
-                        buffer_num+=1;
+                loop {
+                    if start >= data.len() {
+                        break;
                     }
+
+                    let dim = data[start];
+                    let next_start = start + 1;
+                    let end = next_start + dim;
+
+                    if end > data.len() {
+                        return None; //corrupted data
+                    }
+
                     
-                }else{None}
+                    
+                    #(
+                        if field_num ==  buffer_num{
+                            let field_value = <#fields_types>::from_le_bytes(&data[next_start..end]);
+                        }
+                        
+
+                        field_num += 1;
+                    )* 
+                    
+                    if end >= data.len() {
+                        break;
+                    }
+                    start = end;
+                    buffer_num+=1;
+                }
+                    
             }
         }
     };
