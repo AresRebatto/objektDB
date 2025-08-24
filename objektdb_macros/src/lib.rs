@@ -16,7 +16,6 @@ use syn::{
 use proc_macro2;
 use proc_macro2::Span;
 
-
 #[proc_macro_attribute]
 pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
     
@@ -216,11 +215,6 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 
 
-    let known_types = set_types.iter().map(|t| {
-        quote! {
-            #t(#t)
-        }
-    });
 
     TokenStream::from(quote! {
         #input
@@ -237,10 +231,6 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
 
                 Ok(())
             }
-        }
-
-        pub enum KnownTypes {
-            #(#known_types),*
         }
     })
 }
