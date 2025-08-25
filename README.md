@@ -53,7 +53,7 @@ use objektdb::{objektdb_core::storage_engine::*, objektdb_macros::*};
 ```rust
 todo!()
 ```
-
+For other examples and tutorials(which refer to and explain the code of the examples) you can go to the [examples folder](examples) or the [tutorials folder](docs/tutorials/)(Not yet ready)
 ---
 
 ## Restrictions
