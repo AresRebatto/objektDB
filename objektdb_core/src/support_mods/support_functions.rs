@@ -1,9 +1,4 @@
-pub fn converter_builder(types: Vec<String>)-> Result<(), String>{
-    Ok(())
-}
-
-
-pub(crate) fn padding(vec: &mut Vec<u8>, str: String, tot_len: usize)-> Result<(), String>{
+pub(crate) fn string_padding(vec: &mut Vec<u8>, str: String, tot_len: usize)-> Result<(), String>{
     if tot_len < str.len(){
         return Err(String::from("string too long"));
     }
@@ -12,3 +7,5 @@ pub(crate) fn padding(vec: &mut Vec<u8>, str: String, tot_len: usize)-> Result<(
     vec.extend_from_slice(str.as_bytes());
     Ok(())
 }
+
+

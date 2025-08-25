@@ -106,7 +106,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                 vec![#(#field_type_literals.to_string()),*]
             }
 
-            fn from_bytes(data: Vec<u8>)->Option<Self>{
+            fn record_from_bytes(data: Vec<u8>)->Option<Self>{
 
                 if data.is_empty(){
                     return None;

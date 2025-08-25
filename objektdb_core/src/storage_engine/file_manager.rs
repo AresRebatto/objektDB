@@ -231,7 +231,7 @@ pub fn create_table(
 
     //we use null-padding left
     let mut name_bytes: Vec<u8> = Vec::new();
-    if let Err(e) = padding(&mut name_bytes, _table_name.clone(), 64){
+    if let Err(e) = string_padding(&mut name_bytes, _table_name.clone(), 64){
         return Err("Table name is too long, must be 64 bytes or less".to_string());
     }
 
@@ -249,13 +249,13 @@ pub fn create_table(
 
         //Null padding left
         let mut ref_bytes = Vec::new();
-        _ = padding(&mut ref_bytes, r.to_string(), 64);
+        _ = string_padding(&mut ref_bytes, r.to_string(), 64);
         references_field.extend_from_slice(&ref_bytes);
 
     }
 
-    support_functions::converter_builder(_ref)
-        .map_err(|e|format!("Error creating file for converting from strings to values: {}", e))?;
+    //support_functions::converter_builder(_ref)
+    //    .map_err(|e|format!("Error creating file for converting from strings to values: {}", e))?;
 
     //length_field+field+is_fk+length_type+type
     let mut fields: Vec<u8> = Vec::new();
