@@ -135,7 +135,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                     
                     #(
                         if field_num ==  buffer_num{
-                            let field_value = <#fields_types>::from_le_bytes(&data[next_start..end]);
+                            let field_value = <#fields_types>::from_bytes(&data[next_start..end]);
                         }
                         
 
@@ -150,6 +150,10 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                 }
                     
             }
+        }
+
+        fn to_bytes(&self)-> Vec<u8>{
+            todo!()
         }
     };
 

@@ -18,6 +18,7 @@ pub use objektdb_core::{
         set::*
     },
     traits::{
-        crud
+        crud,
+        from_bytes
     }
 };

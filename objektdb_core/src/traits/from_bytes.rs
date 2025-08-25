@@ -43,12 +43,33 @@ impl FromBytes for String {
 
 impl FromBytes for usize {
     fn from_bytes(data: &[u8]) -> Self {
-        u64::from_le_bytes(data.try_into().unwrap()) as usize
+        match std::mem::size_of::<usize>(){
+            4 => {
+                let arr: [u8; 4] = data.try_into().unwrap();
+                u32::from_le_bytes(arr) as usize
+            }
+            8 => {
+                let arr: [u8; 8] = data.try_into().unwrap();
+                u64::from_le_bytes(arr) as usize
+            }
+            _ => unreachable!(),
+        }
+        
     }
 }
 
 impl FromBytes for isize {
     fn from_bytes(data: &[u8]) -> Self {
-        i64::from_le_bytes(data.try_into().unwrap()) as isize
+        match std::mem::size_of::<isize>(){
+            4 => {
+                let arr: [u8; 4] = data.try_into().unwrap();
+                i32::from_le_bytes(arr) as isize
+            }
+            8 => {
+                let arr: [u8; 8] = data.try_into().unwrap();
+                i64::from_le_bytes(arr) as isize
+            }
+            _ => unreachable!(),
+        }
     }
 }
