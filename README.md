@@ -10,6 +10,11 @@
 </p>
 
 ---
+![Status](https://img.shields.io/badge/status-in%20development-yellow?style=for-the-badge)
+
+### 🚧 Project Status  
+> ⚠️ **ObjektDB is currently under development**  
+> It is not ready for production use yet.
 
 ## Overview
 
@@ -45,7 +50,13 @@ objektdb = "0.1"
 Import it in your Rust code:
 
 ```rust
-use objektdb::{objektdb_core::storage_engine::*, objektdb_macros::*};
+use objektdb::{
+  Objekt,
+  odb,
+  Set,
+  from_bytes::FromBytes,
+  objekt_impl
+};
 ```
 
 ### Usage Example
@@ -53,7 +64,9 @@ use objektdb::{objektdb_core::storage_engine::*, objektdb_macros::*};
 ```rust
 todo!()
 ```
+
 For other examples and tutorials(which refer to and explain the code of the examples) you can go to the [examples folder](examples) or the [tutorials folder](docs/tutorials/)(Not yet ready)
+
 ---
 
 ## Restrictions
