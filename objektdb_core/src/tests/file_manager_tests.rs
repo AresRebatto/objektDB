@@ -70,7 +70,6 @@ fn test_create_table_success() {
     let result = create_table(
         table_name.to_string(),
         db_name.to_string(),
-        refs,
         fields,
         methods,
     );
@@ -93,7 +92,6 @@ fn test_create_table_missing_db() {
     let result = create_table(
         "some_table".to_string(),
         "nonexistent".to_string(),
-        vec![],
         vec![],
         vec![],
     );
@@ -119,7 +117,6 @@ fn test_create_table_too_many_tables() {
         db_name.to_string(),
         vec![],
         vec![],
-        vec![],
     );
 
     assert!(result.is_err());
@@ -140,7 +137,6 @@ fn test_table_name_too_long() {
     let result = create_table(
         table_name,
         db_name.to_string(),
-        vec![],
         vec![],
         vec![],
     );

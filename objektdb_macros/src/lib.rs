@@ -11,15 +11,47 @@ use syn::{
     ItemStruct,
     LitStr,
     PathArguments,
-    Type
+    Type,
+    ItemImpl,
+    ImplItem
 };
 use proc_macro2;
 use proc_macro2::Span;
 
 #[proc_macro_attribute]
-pub fn objekt_impl(_attr: TokenStream, _item: TokenStream) -> TokenStream {
-    
-    _item
+pub fn objekt_impl(args: TokenStream, input: TokenStream) -> TokenStream {
+    if !args.is_empty(){
+        panic!("This macro should not have any attributes.");
+    }
+    let mut impl_block = parse_macro_input!(input as ItemImpl);
+
+    let methods_names: Vec<String> = impl_block.items.iter().filter(|item| matches!(item, ImplItem::Fn(_)))
+                                .map(|item| {
+                                    if let ImplItem::Fn(method) = item {
+                                        method.sig.ident.clone().to_string()
+                                    } else {
+                                        unreachable!() // Non dovrebbe mai succedere per via del filter
+                                    }
+                                })
+                                .collect();
+
+    let struct_name = &impl_block.self_ty;
+
+    let expanded = quote! {
+        impl #struct_name{
+            pub fn get_methods_names()-> Vec<String>{
+                let mut res: Vec<String> = Vec::new();
+
+                #(res.push(#methods_names.to_string());)*
+
+                return res;
+            }
+        }
+    };
+
+    expanded.into()
+
+
 }
 
 ///It should be inserted on top of your structs to declare that it is an entity whose 

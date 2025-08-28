@@ -181,8 +181,7 @@ pub fn create_db(db_name: String) -> Result<(), String> {
 /// - `.tbl` files are created inside the same directory as the database.
 pub fn create_table(
     _table_name: String, 
-    _db_name: String, 
-    _ref: Vec<String>, 
+    _db_name: String,
     _fields: Vec<Field>, 
     _methods_names: Vec<String>
 ) -> Result<(), String> {
@@ -239,20 +238,6 @@ pub fn create_table(
 
     let path = current_dir.join(format!("{}/{}.tbl",_db_name, _table_name));
 
-    //Lenth: 1(8 bit for the num of fields) + num_fields*64
-    let mut references_field: Vec<u8> = Vec::new();
-
-    //First byte is num of references
-    references_field.push(_ref.len() as u8);
-
-    for r in &_ref {
-
-        //Null padding left
-        let mut ref_bytes = Vec::new();
-        _ = string_padding(&mut ref_bytes, r.to_string(), 64);
-        references_field.extend_from_slice(&ref_bytes);
-
-    }
 
     //support_functions::converter_builder(_ref)
     //    .map_err(|e|format!("Error creating file for converting from strings to values: {}", e))?;
@@ -269,11 +254,6 @@ pub fn create_table(
         fields.push(field.name.len() as u8);
         fields.extend_from_slice(field.name.as_bytes());
 
-        fields.push(field.is_FK as u8);
-
-        //type
-        fields.push(field.type_.len() as u8);
-        fields.extend_from_slice(field.type_.as_bytes());
     }
 
     tot_len.extend_from_slice(&(fields.len() as u16).to_le_bytes());
@@ -286,7 +266,7 @@ pub fn create_table(
         methods.extend_from_slice(method.as_bytes());
     }
 
-    let offset_header: [u8; 4] = ((76+references_field.len()+fields.len()+methods.len()) as u32).to_le_bytes();
+    let offset_header: [u8; 4] = ((76+fields.len()+methods.len()) as u32).to_le_bytes();
 
     let mut header: Vec<u8> = Vec::new();
 
@@ -294,7 +274,6 @@ pub fn create_table(
     header.extend_from_slice(&name_bytes);
     header.extend_from_slice(&offset_header);
     header.extend_from_slice(&[0u8; 3]);
-    header.extend_from_slice(&references_field);
     header.extend_from_slice(&fields);
     header.extend_from_slice(&methods);
 
