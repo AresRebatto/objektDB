@@ -70,7 +70,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         panic!("Only structs are supported");
     };
 
-    let fields_names = if let Data::Struct(data) = &item.data{
+    let fields_names: Vec<_> = if let Data::Struct(data) = &item.data{
         if let Fields::Named(named_field) = &data.fields{
             named_field.named.iter().map(|f|{
                 let name = f.ident.as_ref().unwrap();
@@ -83,7 +83,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         }
     }else{
         panic!("Only structs are supported");
-    };
+    }.collect();
 
 
     let fields_types: Vec<syn::Type> = if let Data::Struct(data) = &item.data {
@@ -100,6 +100,21 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         panic!("Only structs are supported");
     };
 
+    let field_val = fields_types
+        .iter()
+        .zip(fields_names.iter())
+        .map(|(t, n)| {
+            quote! {
+                if start >= data.len() { return None; }
+                let dim = data[start] as usize;
+                let next_start = start + 1;
+                let end = next_start + dim;
+                if end > data.len() { return None; }
+                let #n: #t = <#t>::from_bytes(&data[next_start..end]);
+                start = end;
+            }
+        });
+
     let expanded = quote! {
         impl objektdb::objektdb_core::traits::objekt::Objekt for #name{
             fn get_field_types() -> Vec<String>{
@@ -112,49 +127,24 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                     return None;
                 }
 
-                let mut field_num = 0;
-
-                let mut buffer_num = 0;
-
-                let mut start = 0;
+                let mut start: usize = 0;
                 
-                loop {
-                    if start >= data.len() {
-                        break;
-                    }
-
-                    let dim = data[start];
-                    let next_start = start + 1;
-                    let end = next_start + dim;
-
-                    if end > data.len() {
-                        return None; //corrupted data
-                    }
-
+                #(
+                    #field_val
+                )*
+               
+               Some(Self{
+                #(#fields_names: #fields_names),*
+               })
                     
-                    
-                    #(
-                        if field_num ==  buffer_num{
-                            let field_value = <#fields_types>::from_bytes(&data[next_start..end]);
-                        }
-                        
+            }
 
-                        field_num += 1;
-                    )* 
-                    
-                    if end >= data.len() {
-                        break;
-                    }
-                    start = end;
-                    buffer_num+=1;
-                }
-                    
+            fn to_bytes(&self)-> Vec<u8>{
+                todo!()
             }
         }
 
-        fn to_bytes(&self)-> Vec<u8>{
-            todo!()
-        }
+
     };
 
     expanded.into()
@@ -172,6 +162,8 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut set_types_literal: Vec<LitStr> = Vec::new();
     let mut params: Vec<proc_macro2::TokenStream> = Vec::new();
 
+
+    //Extract T from Set<T>
     match &input.fields {
         syn::Fields::Named(field) => {
             for f in field.named.iter() {
@@ -203,19 +195,6 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
         })
         .collect();
 
-    //Insert the references in a vec
-    let blocks = set_types
-        .iter()
-        .zip(set_types_literal.iter())
-        .map(|(t, lit)| {
-            quote! {
-                for field in #t::get_field_types() {
-                    if field == #lit {
-                        references.push(field.clone());
-                    }
-                }
-            }
-        });
 
 
 
@@ -228,10 +207,8 @@ pub fn odb(attr: TokenStream, item: TokenStream) -> TokenStream {
             pub fn new() -> Result<(), String> {
                 objektdb::objektdb_core::storage_engine::file_manager::create_db(#db_name_lit.to_string());
 
-                let mut references: Vec<String> = Vec::new();
                 let mut set_types: Vec<String> = Vec::new();
 
-                #(#blocks)*
 
                 Ok(())
             }
