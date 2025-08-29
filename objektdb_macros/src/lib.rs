@@ -38,7 +38,8 @@ pub fn objekt_impl(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let struct_name = &impl_block.self_ty;
 
-    let expanded = quote! {
+    let expanded = quote!{
+
         impl #struct_name{
             pub fn get_methods_names()-> Vec<String>{
                 let mut res: Vec<String> = Vec::new();
@@ -84,8 +85,6 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
     let name = &item.ident;
     let name_lit_str = LitStr::new(&name.to_string(), Span::call_site());
 
-    //FIXME: Need to extract the types i32 for OID or T from Primitive
-    //Use to mark the type in the table file
     let field_type_literals: Vec<LitStr> = if let Data::Struct(data) = &item.data {
         if let Fields::Named(named) = &data.fields {
             named.named.iter().map(|f| {
@@ -119,10 +118,6 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
     }else{
         panic!("Only structs are supported");
     }.collect();
-
-    let fields_names_literals: Vec<_> = fields_names.iter().map(|n|{
-        LitStr::new(n.to_token_stream().to_string().as_ref(), Span::call_site())
-    }).collect();
    
 
 
@@ -178,6 +173,10 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         }
     }).collect();
 
+    let fields_names_literals: Vec<_> = fields_inner_types.iter().map(|n|{
+        LitStr::new(n.to_token_stream().to_string().as_ref(), Span::call_site())
+    }).collect();
+
     let field_val = fields_types
     .iter()
     .zip(fields_names.iter())
@@ -220,7 +219,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             let #n = #constructor;
             start = end;
         }
-    });;
+    });
 
     let expanded = quote! {
         impl objektdb::objektdb_core::traits::objekt::Objekt for #name{
@@ -250,8 +249,19 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                 todo!()
             }
 
-            fn new(struc_name: String)-> Result<(), String>{
-                objektdb::objektdb_core::storage_engine::file_manager::create_table(#name_lit_str.to_string(), struct_name, fields, methods_names)
+            fn new(struct_name: String)-> Result<(), String>{
+                
+                let methods_names = if GET_METHODS_NAMES_EXISTS{
+                    Self::get_methods_names()
+                }else{vec![]};
+
+                objektdb::objektdb_core::storage_engine::file_manager::create_table(
+                    #name_lit_str.to_string(), 
+                    struct_name, 
+                    vec![#(#fields_names_literals.to_string()),*], 
+                    methods_names
+
+                )
             }
         }
 
