@@ -251,7 +251,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             }
 
             fn new(struc_name: String)-> Result<(), String>{
-                objektdb::objektdb_core::storage_engine::file_manager::create_table(#name_lit_str, struct_name, fields, methods_names)
+                objektdb::objektdb_core::storage_engine::file_manager::create_table(#name_lit_str.to_string(), struct_name, fields, methods_names)
             }
         }
 
