@@ -24,7 +24,7 @@ pub fn objekt_impl(args: TokenStream, input: TokenStream) -> TokenStream {
     if !args.is_empty(){
         panic!("This macro should not have any attributes.");
     }
-    let mut impl_block = parse_macro_input!(input as ItemImpl);
+    let impl_block = parse_macro_input!(input as ItemImpl);
 
     let methods_names: Vec<String> = impl_block.items.iter().filter(|item| matches!(item, ImplItem::Fn(_)))
                                 .map(|item| {
@@ -140,7 +140,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         panic!("Only structs are supported");
     };
 
-    let fields_inner_types = fields_types.iter().map(|ty| {
+    let fields_inner_types: Vec<_> = fields_types.iter().map(|ty| {
         match ty {
             Type::Path(type_path) => {
                 if let Some(last_segment) = type_path.path.segments.last() {
@@ -176,26 +176,51 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                 panic!("Unsupported type. Only path types (OID and Primitive<T>) are supported");
             }
         }
-    });
-
+    }).collect();
 
     let field_val = fields_types
-        .iter()
-        .zip(fields_names.iter())
-        .zip(fields_inner_types)
-        .map(|((t, n), inner_ty)| {
-            quote! {
-                if start >= data.len() { return None; }
-                let dim = data[start] as usize;
-                let next_start = start + 1;
-                let end = next_start + dim;
-                if end > data.len() { return None; }
-                let #n: objektdb::objektdb_core::support_mods::field::#t = objektdb::objektdb_core::support_mods::field::<#t>{
-                    val: #inner_ty::from_bytes(&data[next_start..end])
-                };
-                start = end;
+    .iter()
+    .zip(fields_names.iter())
+    .zip(fields_inner_types)
+    .map(|((t, n), inner_ty)| {
+        // Determina se il tipo ha generics
+        let constructor = match t {
+            Type::Path(type_path) => {
+                if let Some(last_segment) = type_path.path.segments.last() {
+                    match last_segment.ident.to_string().as_str() {
+                        "OID" => {
+                            quote! {
+                                objektdb::objektdb_core::support_mods::field::OID {
+                                    val: #inner_ty::from_bytes(&data[next_start..end])
+                                }
+                            }
+                        }
+                        "Primitive" => {
+                            quote! {
+                                objektdb::objektdb_core::support_mods::field::Primitive::<#inner_ty> {
+                                    val: #inner_ty::from_bytes(&data[next_start..end])
+                                }
+                            }
+                        }
+                        _ => panic!("Unsupported type")
+                    }
+                } else {
+                    panic!("Unable to determine type")
+                }
             }
-        });
+            _ => panic!("Unsupported type")
+        };
+
+        quote! {
+            if start >= data.len() { return None; }
+            let dim = data[start] as usize;
+            let next_start = start + 1;
+            let end = next_start + dim;
+            if end > data.len() { return None; }
+            let #n = #constructor;
+            start = end;
+        }
+    });;
 
     let expanded = quote! {
         impl objektdb::objektdb_core::traits::objekt::Objekt for #name{

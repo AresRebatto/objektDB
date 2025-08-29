@@ -7,7 +7,7 @@ edition = "2024"
 syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
 objektdb_core = {path = "../objektdb_core"}
-proc-macro2 = "1.0"
+proc-macro2 = { version = "1.0", features = ["span-locations"] }
 
 [lib]
 proc-macro = true

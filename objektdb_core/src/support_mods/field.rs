@@ -13,9 +13,9 @@ pub struct Field{
 
 
 pub struct OID{
-    val: i32
+    pub val: i32
 }
 
 pub struct Primitive<T>{
-    val: T
+    pub val: T
 }
