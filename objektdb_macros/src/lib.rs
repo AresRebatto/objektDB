@@ -13,7 +13,8 @@ use syn::{
     PathArguments,
     Type,
     ItemImpl,
-    ImplItem
+    ImplItem,
+    TypePath
 };
 use proc_macro2;
 use proc_macro2::Span;
@@ -83,6 +84,8 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
     let name = &item.ident;
     let name_lit_str = LitStr::new(&name.to_string(), Span::call_site());
 
+    //FIXME: Need to extract the types i32 for OID or T from Primitive
+    //Use to mark the type in the table file
     let field_type_literals: Vec<LitStr> = if let Data::Struct(data) = &item.data {
         if let Fields::Named(named) = &data.fields {
             named.named.iter().map(|f| {
@@ -117,6 +120,11 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         panic!("Only structs are supported");
     }.collect();
 
+    let fields_names_literals: Vec<_> = fields_names.iter().map(|n|{
+        LitStr::new(n.to_token_stream().to_string().as_ref(), Span::call_site())
+    }).collect();
+   
+
 
     let fields_types: Vec<syn::Type> = if let Data::Struct(data) = &item.data {
         if let Fields::Named(named_field) = &data.fields {
@@ -132,17 +140,59 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         panic!("Only structs are supported");
     };
 
+    let fields_inner_types = fields_types.iter().map(|ty| {
+        match ty {
+            Type::Path(type_path) => {
+                if let Some(last_segment) = type_path.path.segments.last() {
+                    let type_name = &last_segment.ident;
+                    
+                    match type_name.to_string().as_str() {
+                        "OID" => {
+                            if !matches!(last_segment.arguments, syn::PathArguments::None) {
+                                panic!("OID must not have generic parameters");
+                            }
+                            syn::parse_quote!(i32)
+                        }
+                        "Primitive" => {
+                            if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
+                                if let Some(GenericArgument::Type(inner_type)) = args.args.first() {
+                                    inner_type.clone()
+                                } else {
+                                    panic!("Primitive must have exactly one generic type parameter T");
+                                }
+                            } else {
+                                panic!("Primitive must be parameterized with a generic type");
+                            }
+                        }
+                        _ => {
+                            panic!("Unsupported type: '{}'. Only OID and Primitive<T> are supported", type_name);
+                        }
+                    }
+                } else {
+                    panic!("Unable to determine type name from path");
+                }
+            }
+            _ => {
+                panic!("Unsupported type. Only path types (OID and Primitive<T>) are supported");
+            }
+        }
+    });
+
+
     let field_val = fields_types
         .iter()
         .zip(fields_names.iter())
-        .map(|(t, n)| {
+        .zip(fields_inner_types)
+        .map(|((t, n), inner_ty)| {
             quote! {
                 if start >= data.len() { return None; }
                 let dim = data[start] as usize;
                 let next_start = start + 1;
                 let end = next_start + dim;
                 if end > data.len() { return None; }
-                let #n: #t = <#t>::from_bytes(&data[next_start..end]);
+                let #n: objektdb::objektdb_core::support_mods::field::#t = objektdb::objektdb_core::support_mods::field::<#t>{
+                    val: #inner_ty::from_bytes(&data[next_start..end])
+                };
                 start = end;
             }
         });
@@ -173,6 +223,10 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
 
             fn to_bytes(&self)-> Vec<u8>{
                 todo!()
+            }
+
+            fn new(struc_name: String)-> Result<(), String>{
+                objektdb::objektdb_core::storage_engine::file_manager::create_table(#name_lit_str, struct_name, fields, methods_names)
             }
         }
 

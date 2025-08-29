@@ -10,27 +10,12 @@ pub struct Field{
     
 }
 
-pub enum FieldType<T>{
-    OID(i32),
-    Primitive(T)
+
+
+pub struct OID{
+    val: i32
 }
 
-
-impl<T> FieldType<T>{
-    pub fn unwrap_oid(&self)-> i32{
-        match self{
-            FieldType::OID(id)=> id.clone(),
-            FieldType::Primitive(_)=>panic!("If you want to unwrap a primitive, you should use the unwrap_primitive() method.")
-        }
-    }
-
-    pub fn unwrap_primitive(&self)-> T
-    where
-        T: Clone
-    {
-    match self{
-        FieldType::OID(_)=> panic!("If you want to unwrap a oid, you should use the unwrap_oid() method."),
-        FieldType::Primitive(val)=>val.clone()
-    }
-    }
+pub struct Primitive<T>{
+    val: T
 }
