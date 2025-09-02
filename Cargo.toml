@@ -12,3 +12,6 @@ members = [
     "objektdb_core",
     "objektdb_macros"
 ]
+
+[features]
+impl_blocks = ["objektdb_macros/impl_blocks"]

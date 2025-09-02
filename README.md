@@ -51,7 +51,7 @@ If you want to insert and register the methods of an impl block for a struct, yo
 [dependencies]
 objektdb = {version="0.1", features=["impl_blocks"]}
 ```
-Warning. If you enable this feature, every struct that uses the `Objekt` macro must have an impl block that applies the `objekt_impl` macro.
+Warning. If you enable this feature, every struct that uses the `Objekt` macro must have an impl block that applies the `objekt_impl` macro, event if it's empty.
 
 Import it in your Rust code:
 

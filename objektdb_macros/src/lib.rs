@@ -40,8 +40,8 @@ pub fn objekt_impl(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let expanded = quote!{
 
-        impl objektdb::objektdb_core::traits::impl_block for #struct_name{
-            pub fn get_methods_names()-> Vec<String>{
+        impl objektdb::objektdb_core::traits::impl_block::ImplBlock for #struct_name{
+            fn get_methods_names()-> Vec<String>{
                 let mut res: Vec<String> = Vec::new();
 
                 #(res.push(#methods_names.to_string());)*

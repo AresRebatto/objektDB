@@ -58,11 +58,11 @@ fn test_create_table_success() {
     let fields = vec![
         Field {
             name: "id".to_string(),
-            is_OID: true
+            is_oid: true
         },
         Field {
             name: "role_id".to_string(),
-            is_OID: false
+            is_oid: false
         },
     ];
     let methods = vec!["find_all".to_string()];

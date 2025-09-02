@@ -19,6 +19,7 @@ pub use objektdb_core::{
     },
     traits::{
         crud,
-        from_bytes
+        from_bytes::FromBytes,
+        impl_block::ImplBlock
     }
 };

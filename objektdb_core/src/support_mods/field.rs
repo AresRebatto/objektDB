@@ -6,7 +6,7 @@
 ///with regard to reading from binary files.
 pub struct Field{
     pub name: String,
-    pub is_OID: bool,
+    pub is_oid: bool,
     
 }
 
