@@ -16,7 +16,7 @@ use syn::{
     ImplItem,
     TypePath
 };
-use proc_macro2;
+use proc_macro2::{self};
 use proc_macro2::Span;
 
 #[proc_macro_attribute]
@@ -40,7 +40,7 @@ pub fn objekt_impl(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let expanded = quote!{
 
-        impl #struct_name{
+        impl objektdb::objektdb_core::traits::impl_block for #struct_name{
             pub fn get_methods_names()-> Vec<String>{
                 let mut res: Vec<String> = Vec::new();
 
@@ -221,6 +221,19 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         }
     });
 
+    let mut methods_n;
+    #[cfg(feature="impl_blocks")]{
+        methods_n = quote! {
+            let methods_names = Self::get_methods_names();
+        };
+    }
+
+    #[cfg(not(feature="impl_blocks"))]{
+        methods_n = quote! {
+            let methods_names = vec![];
+        };
+    }
+
     let expanded = quote! {
         impl objektdb::objektdb_core::traits::objekt::Objekt for #name{
             fn get_field_types() -> Vec<String>{
@@ -251,9 +264,8 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
 
             fn new(struct_name: String)-> Result<(), String>{
                 
-                let methods_names = if GET_METHODS_NAMES_EXISTS{
-                    Self::get_methods_names()
-                }else{vec![]};
+               #methods_n
+
 
                 objektdb::objektdb_core::storage_engine::file_manager::create_table(
                     #name_lit_str.to_string(), 

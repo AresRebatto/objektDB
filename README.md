@@ -45,7 +45,13 @@ Add the dependency to your `Cargo.toml`:
 ```toml
 [dependencies]
 objektdb = "0.1"
-````
+```
+If you want to insert and register the methods of an impl block for a struct, you need to insert the following feature:
+```toml
+[dependencies]
+objektdb = {version="0.1", features=["impl_blocks"]}
+```
+Warning. If you enable this feature, every struct that uses the `Objekt` macro must have an impl block that applies the `objekt_impl` macro.
 
 Import it in your Rust code:
 
