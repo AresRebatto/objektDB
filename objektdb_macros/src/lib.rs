@@ -177,17 +177,26 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
         LitStr::new(n.to_token_stream().to_string().as_ref(), Span::call_site())
     }).collect();
 
-    let field_val = fields_types
-    .iter()
-    .zip(fields_names.iter())
-    .zip(fields_inner_types)
-    .map(|((t, n), inner_ty)| {
-        // Determina se il tipo ha generics
+   let mut field_definitions = Vec::new();
+    let mut field_constructions = Vec::new();
+
+
+    for ((t, n), inner_ty) in fields_types.iter().zip(fields_names.iter()).zip(fields_inner_types) {
         let constructor = match t {
             Type::Path(type_path) => {
                 if let Some(last_segment) = type_path.path.segments.last() {
                     match last_segment.ident.to_string().as_str() {
                         "OID" => {
+                            let inner_ty_lit = LitStr::new(inner_ty.to_token_stream().to_string().as_ref(), Span::call_site());
+                            
+
+                            field_definitions.push(quote!{
+                                objektdb::objektdb_core::support_mods::field::Field{
+                                    name: #inner_ty_lit.to_string(),
+                                    is_oid: true
+                                }
+                            });
+
                             quote! {
                                 objektdb::objektdb_core::support_mods::field::OID {
                                     val: #inner_ty::from_bytes(&data[next_start..end])
@@ -195,6 +204,15 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                             }
                         }
                         "Primitive" => {
+                            let inner_ty_lit = LitStr::new(inner_ty.to_token_stream().to_string().as_ref(), Span::call_site());
+                            
+                            field_definitions.push(quote!{
+                                objektdb::objektdb_core::support_mods::field::Field{
+                                    name: #inner_ty_lit.to_string(),
+                                    is_oid: false
+                                }
+                            });
+
                             quote! {
                                 objektdb::objektdb_core::support_mods::field::Primitive::<#inner_ty> {
                                     val: #inner_ty::from_bytes(&data[next_start..end])
@@ -210,7 +228,8 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             _ => panic!("Unsupported type")
         };
 
-        quote! {
+        // Crea il blocco di costruzione del field
+        field_constructions.push(quote! {
             if start >= data.len() { return None; }
             let dim = data[start] as usize;
             let next_start = start + 1;
@@ -218,8 +237,8 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             if end > data.len() { return None; }
             let #n = #constructor;
             start = end;
-        }
-    });
+        });
+    }
 
     let mut methods_n;
     #[cfg(feature="impl_blocks")]{
@@ -233,6 +252,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             let methods_names = vec![];
         };
     }
+
 
     let expanded = quote! {
         impl objektdb::objektdb_core::traits::objekt::Objekt for #name{
@@ -249,7 +269,7 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
                 let mut start: usize = 0;
                 
                 #(
-                    #field_val
+                    #field_constructions
                 )*
                
                Some(Self{
@@ -265,14 +285,15 @@ pub fn objekt_derive(input: TokenStream) -> TokenStream {
             fn new(struct_name: String)-> Result<(), String>{
                 
                #methods_n
-
+                let mut fields_obj: Vec<objektdb::objektdb_core::support_mods::field::Field> = vec![
+                    #(#field_definitions),*
+                ];
 
                 objektdb::objektdb_core::storage_engine::file_manager::create_table(
                     #name_lit_str.to_string(), 
                     struct_name, 
-                    vec![#(#fields_names_literals.to_string()),*], 
+                    fields_obj, 
                     methods_names
-
                 )
             }
         }
